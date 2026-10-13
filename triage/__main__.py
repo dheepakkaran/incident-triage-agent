@@ -35,6 +35,10 @@ def cmd_smoke(args: argparse.Namespace) -> int:
         from triage.tools.smoke import smoke_tools
 
         smoke_tools(args.case)
+    elif args.target == "mcp":
+        from triage.mcp_server import smoke_mcp
+
+        smoke_mcp()
     else:
         from triage.llm.smoke import smoke_llm
 
@@ -88,8 +92,8 @@ def build_parser() -> argparse.ArgumentParser:
     runbooks.add_argument("action", choices=["index", "check"])
     runbooks.set_defaults(func=cmd_runbooks)
 
-    smoke = sub.add_parser("smoke", help="quick checks: run all tools on a case, or one LLM call")
-    smoke.add_argument("target", choices=["tools", "llm"])
+    smoke = sub.add_parser("smoke", help="quick checks: all tools on a case, one LLM call, or the MCP server")
+    smoke.add_argument("target", choices=["tools", "llm", "mcp"])
     smoke.add_argument("--case", default="case_001")
     smoke.set_defaults(func=cmd_smoke)
 
