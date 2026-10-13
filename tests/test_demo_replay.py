@@ -67,9 +67,10 @@ def test_chat_view_tells_the_story_in_order(mock_deps_factory):
         for node, delta in update.items():
             if node != "__interrupt__":
                 transcript += chat.messages_for(node, delta, graph.get_state(thread_config(state["run_id"])).values)
-    speakers = [who for who, _ in transcript]
+    speakers = [entry[0] for entry in transcript]
     assert speakers.index("scout") < speakers.index("skeptic")
     text = chat.render(transcript)
     assert "My diagnosis: <b>cartservice</b> has a <b>cpu</b> fault" in text
     assert "I agree." in text and "Waiting for your approval." in text
-    assert 'class="orb scout"' in text and 'class="orb skeptic"' in text
+    assert 'class="orb scout' in text and 'class="orb skeptic' in text
+    assert 'orb skeptic happy' in text  # Skeptic agreed, so it smiles

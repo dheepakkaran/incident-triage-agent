@@ -7,6 +7,8 @@ The technical detail (raw tool output, every step) stays in the "Under the hood"
 
 import html
 
+from orbs import orb_html
+
 WHO = {
     "scout": ("Scout", "investigator"),
     "skeptic": ("Skeptic", "reviewer"),
@@ -55,17 +57,17 @@ def messages_for(node: str, delta: dict, values: dict) -> list[tuple[str, str]]:
     elif node == "investigate":
         for reply in delta.get("messages") or []:
             for call in getattr(reply, "tool_calls", None) or []:
-                out.append(("scout", _tool_phrase(call["name"], call.get("args") or {})))
+                out.append(("scout", _tool_phrase(call["name"], call.get("args") or {}), "think"))
             text = getattr(reply, "content", "")
             if text and not getattr(reply, "tool_calls", None):
-                out.append(("scout", _e(text)))
+                out.append(("scout", _e(text), "talk"))
         if delta.get("escalation_reason"):
             out.append(("system", f"⚠️ {_e(delta['escalation_reason'])}"))
     elif node in ("run_tools", "review_tools"):
         who = "scout" if node == "run_tools" else "skeptic"
         snippets = "".join(_result_snippet(cid, r) for cid, r in (delta.get("tool_results") or {}).items())
         if snippets:
-            out.append((who, f"<span class='muted'>Here is what came back:</span>{snippets}"))
+            out.append((who, f"<span class='muted'>Here is what came back:</span>{snippets}", "read"))
     elif node == "diagnose":
         d = delta.get("diagnosis")
         if d:
@@ -78,19 +80,20 @@ def messages_for(node: str, delta: dict, values: dict) -> list[tuple[str, str]]:
                     f"My diagnosis: <b>{_e(top['service'])}</b> has a <b>{_e(top['fault_type'])}</b> fault "
                     f"(confidence {top['confidence']:.2f}){f'. Also possible: {others}' if others else ''}."
                     f"<ul>{evidence}</ul><span class='muted'>{_e(d['summary'])}</span>",
+                    "happy",
                 )
             )
     elif node == "review":
         pending = delta.get("review_messages") or []
         if pending and getattr(pending[-1], "tool_calls", None):
             for call in pending[-1].tool_calls:
-                out.append(("skeptic", "Let me check that myself. " + _tool_phrase(call["name"], call.get("args") or {})))
+                out.append(("skeptic", "Let me check that myself. " + _tool_phrase(call["name"], call.get("args") or {}), "suspicious"))
         for r in delta.get("reviews") or []:
             evidence = "".join(f"<li><span class='tid'>{_e(e['tool_call_id'])}</span> <code>{_e(e['quote'])}</code></li>" for e in r.get("evidence") or [])
             if r["verdict"] == "agree":
-                out.append(("skeptic", f"I agree. {_e(r['reason'])}"))
+                out.append(("skeptic", f"I agree. {_e(r['reason'])}", "happy"))
             else:
-                out.append(("skeptic", f"I disagree: I think <b>{_e(r['suspected_service'])}</b> is the real cause. {_e(r['reason'])}<ul>{evidence}</ul>"))
+                out.append(("skeptic", f"I disagree: I think <b>{_e(r['suspected_service'])}</b> is the real cause. {_e(r['reason'])}<ul>{evidence}</ul>", "doubt"))
         if delta.get("revision_round") == 1:
             out.append(("system", "↩️ Skeptic sent the case back to Scout for one more look."))
     elif node == "propose_action":
@@ -115,21 +118,33 @@ def messages_for(node: str, delta: dict, values: dict) -> list[tuple[str, str]]:
     return out
 
 
-def render(transcript: list[tuple[str, str]]) -> str:
+def last_moods(transcript: list) -> dict:
+    """Each agent's latest mood, so the header faces match the conversation."""
+    moods = {"scout": "", "skeptic": ""}
+    for entry in transcript:
+        if entry[0] in moods and len(entry) > 2:
+            moods[entry[0]] = entry[2]
+    return moods
+
+
+def render(transcript: list) -> str:
     parts = []
-    for who, text in transcript:
+    for i, entry in enumerate(transcript):
+        who, text = entry[0], entry[1]
+        mood = entry[2] if len(entry) > 2 else ""
+        new = " new" if i == len(transcript) - 1 else ""  # only the newest message pops in
         if who in ("scout", "skeptic"):
             name, role = WHO[who]
             parts.append(
-                f'<div class="msg {who}"><span class="orb {who}" aria-hidden="true"></span>'
+                f'<div class="msg {who}{new}">{orb_html(who, mood, "md")}'
                 f'<div class="bubble"><div class="who">{name} <small>· {role}</small></div>{text}</div></div>'
             )
         elif who == "human":
-            parts.append(f'<div class="msg human"><div class="bubble"><div class="who">You</div>{text}</div><span class="me">🙋</span></div>')
+            parts.append(f'<div class="msg human{new}"><div class="bubble"><div class="who">You</div>{text}</div><span class="me">🙋</span></div>')
         elif who == "alert":
             parts.append(f'<div class="msg alert"><div class="bubble">🚨 <b>Alert</b> · {text}</div></div>')
         else:
-            parts.append(f'<div class="sys">{text}</div>')
+            parts.append(f'<div class="sys{new}">{text}</div>')
     return '<div class="chat">' + "".join(parts) + "</div>"
 
 
@@ -156,5 +171,8 @@ CHAT_CSS = """
 .tid {display: inline-block; font-family: ui-monospace, monospace; font-size: .72rem; padding: 0 6px;
       border-radius: 6px; background: #8883;}
 .sys {align-self: center; text-align: center; font-size: .82rem; opacity: .85; max-width: 90%;}
+.new {animation: msg-pop .35s ease-out;}
+@keyframes msg-pop {from {opacity: 0; transform: translateY(8px) scale(.97);} to {opacity: 1; transform: none;}}
+@media (prefers-reduced-motion: reduce) {.new {animation: none;}}
 </style>
 """

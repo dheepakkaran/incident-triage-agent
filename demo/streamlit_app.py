@@ -18,10 +18,12 @@ sys.path.insert(0, str(ROOT / "demo"))
 
 import chat  # noqa: E402
 import core  # noqa: E402
+import orbs  # noqa: E402
 
 THREADS = core.configure_environment()
 
 import streamlit as st  # noqa: E402
+import streamlit.components.v1 as components  # noqa: E402
 
 # Secrets stay on the server: copy the key into the process environment, never into the page.
 try:
@@ -32,42 +34,16 @@ except FileNotFoundError:  # no secrets file when running locally without one
 
 st.set_page_config(page_title="Incident triage agent", page_icon="🚨", layout="wide")
 
-# Each agent has its own orb: Scout (investigator) breathes with a scanning satellite,
-# Skeptic (reviewer) has a spinning inspection ring. Motion stops for reduced-motion users.
-ORB_CSS = """
-<style>
-.orb {width: 22px; height: 22px; border-radius: 50%; display: inline-block; position: relative;
-      vertical-align: middle; margin-right: 8px; flex: none;}
-.orb.lg {width: 46px; height: 46px; margin-right: 12px;}
-.orb.scout {background: radial-gradient(circle at 32% 28%, #f0fdff 0%, #5ad8ff 30%, #1f6bff 68%, #0a2a73 100%);
-            box-shadow: 0 0 10px 2px #3fc6ff88; animation: orb-breathe 2.8s ease-in-out infinite;}
-.orb.scout::after {content: ""; position: absolute; width: 24%; height: 24%; border-radius: 50%;
-                   background: #c9f6ff; box-shadow: 0 0 6px #c9f6ff; top: -12%; left: 38%;
-                   transform-origin: 50% 258%; animation: orb-spin 3.2s linear infinite;}
-.orb.skeptic {background: radial-gradient(circle at 36% 30%, #fff4dc 0%, #ffbe55 28%, #ff4f8b 64%, #4e0b36 100%);
-              box-shadow: 0 0 10px 2px #ff4f8b77;}
-.orb.skeptic::before {content: ""; position: absolute; inset: -18%; border-radius: 50%;
-                      background: conic-gradient(from 0deg, transparent 0 62%, #ffd27a 80%, transparent 96%);
-                      -webkit-mask: radial-gradient(circle, transparent 57%, #000 60%);
-                      mask: radial-gradient(circle, transparent 57%, #000 60%);
-                      animation: orb-spin 1.6s linear infinite;}
-@keyframes orb-breathe {0%, 100% {box-shadow: 0 0 8px 1px #3fc6ff66; transform: scale(1);}
-                        50% {box-shadow: 0 0 16px 4px #3fc6ffaa; transform: scale(1.06);}}
-@keyframes orb-spin {to {transform: rotate(360deg);}}
-@media (prefers-reduced-motion: reduce) {.orb, .orb::before, .orb::after {animation: none !important;}}
-.agent-card {display: flex; align-items: center; padding: 10px 14px; border-radius: 14px;
-             border: 1px solid #8884; margin-bottom: 8px;}
-.agent-card b {font-size: 1.05rem;}
-.agent-card small {opacity: .75;}
+# The agents' faces (eyes, moods, reactions) live in demo/orbs.py.
+ORB_CSS = "<style>" + orbs.ORB_CSS + """
 .orb-h {display: flex; align-items: center; font-size: 1.35rem; font-weight: 600; margin: 1.2rem 0 .4rem;}
-</style>
-"""
+</style>"""
 st.markdown(ORB_CSS, unsafe_allow_html=True)
 st.markdown(chat.CHAT_CSS, unsafe_allow_html=True)
 
 
-def orb(agent: str, large: bool = False) -> str:
-    return f'<span class="orb {agent}{" lg" if large else ""}" aria-hidden="true"></span>'
+def orb(agent: str, large: bool = False, mood: str = "") -> str:
+    return orbs.orb_html(agent, mood, "lg" if large else "")
 
 
 def orb_heading(agent: str, text: str) -> None:
@@ -248,17 +224,7 @@ def show_report(values: dict) -> None:
 
 st.title("🚨 Incident triage agent")
 st.caption("First-pass root-cause analysis with LangGraph, guardrails, a reviewer agent and a human approval gate. Nothing is ever executed.")
-scout_col, skeptic_col = st.columns(2)
-scout_col.markdown(
-    f'<div class="agent-card">{orb("scout", large=True)}<div><b>Scout</b> · investigator<br>'
-    "<small>Calls the 5 read-only tools, follows the call graph, writes the diagnosis with quoted evidence.</small></div></div>",
-    unsafe_allow_html=True,
-)
-skeptic_col.markdown(
-    f'<div class="agent-card">{orb("skeptic", large=True)}<div><b>Skeptic</b> · reviewer<br>'
-    "<small>Tries to prove Scout wrong: is the blamed service the cause, or a victim of a dependency?</small></div></div>",
-    unsafe_allow_html=True,
-)
+header_box = st.empty()  # filled at the end of the script, so the faces match the latest messages
 triage_tab, hood_tab, results_tab, guard_tab, about_tab = st.tabs(
     ["💬 Triage", "🔧 Under the hood", "Results", "Guardrails", "About"]
 )
@@ -351,3 +317,10 @@ Hugging Face copy is MIT). This demo uses a trimmed SQLite copy of the 15 test c
 Cold start of this server (data download, embedding model, Chroma index): {BOOT['cold_start_s']}s · CPU threads: {THREADS}.
 """
     )
+
+
+# ---- interactive header (drawn last so the faces match this run's latest reactions) ----
+moods = chat.last_moods(ss.transcript) if ss.run_values else {"scout": "", "skeptic": ""}
+dark = getattr(getattr(st.context, "theme", None), "type", "dark") != "light"
+with header_box:
+    components.html(orbs.header_html(moods["scout"], moods["skeptic"], dark), height=160)
