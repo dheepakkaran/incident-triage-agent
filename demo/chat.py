@@ -127,16 +127,18 @@ def last_moods(transcript: list) -> dict:
     return moods
 
 
-def render(transcript: list) -> str:
+def render(transcript: list, typing: str | None = None) -> str:
+    """Chat bubbles. `typing` ('scout' or 'skeptic') adds a live "is typing" bubble at the end."""
     parts = []
     for i, entry in enumerate(transcript):
         who, text = entry[0], entry[1]
         mood = entry[2] if len(entry) > 2 else ""
-        new = " new" if i == len(transcript) - 1 else ""  # only the newest message pops in
+        newest = i == len(transcript) - 1 and not typing
+        new = " new" if newest else ""  # only the newest message pops in and shows its badge
         if who in ("scout", "skeptic"):
             name, role = WHO[who]
             parts.append(
-                f'<div class="msg {who}{new}">{orb_html(who, mood, "md")}'
+                f'<div class="msg {who}{new}">{orb_html(who, mood + (" pop" if newest else ""), "md")}'
                 f'<div class="bubble"><div class="who">{name} <small>· {role}</small></div>{text}</div></div>'
             )
         elif who == "human":
@@ -145,6 +147,13 @@ def render(transcript: list) -> str:
             parts.append(f'<div class="msg alert"><div class="bubble">🚨 <b>Alert</b> · {text}</div></div>')
         else:
             parts.append(f'<div class="sys{new}">{text}</div>')
+    if typing in WHO:
+        name, role = WHO[typing]
+        parts.append(
+            f'<div class="msg {typing} new">{orb_html(typing, "think", "md")}'
+            f'<div class="bubble typing"><div class="who">{name} <small>· {role}</small></div>'
+            '<span class="dots"><i></i><i></i><i></i></span></div></div>'
+        )
     return '<div class="chat">' + "".join(parts) + "</div>"
 
 
@@ -172,7 +181,12 @@ CHAT_CSS = """
       border-radius: 6px; background: #8883;}
 .sys {align-self: center; text-align: center; font-size: .82rem; opacity: .85; max-width: 90%;}
 .new {animation: msg-pop .35s ease-out;}
+.typing .dots {display: inline-flex; gap: 4px; padding: 4px 0 2px;}
+.typing .dots i {width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .35;
+                 animation: dot-bounce 1s ease-in-out infinite;}
+.typing .dots i:nth-child(2) {animation-delay: .15s;} .typing .dots i:nth-child(3) {animation-delay: .3s;}
+@keyframes dot-bounce {0%, 60%, 100% {transform: translateY(0); opacity: .35;} 30% {transform: translateY(-4px); opacity: 1;}}
 @keyframes msg-pop {from {opacity: 0; transform: translateY(8px) scale(.97);} to {opacity: 1; transform: none;}}
-@media (prefers-reduced-motion: reduce) {.new {animation: none;}}
+@media (prefers-reduced-motion: reduce) {.new, .typing .dots i {animation: none;}}
 </style>
 """

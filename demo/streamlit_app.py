@@ -93,6 +93,12 @@ def run_graph(payload, chat_box) -> None:
                 chat_box.markdown(chat.render(ss.transcript), unsafe_allow_html=True)
                 if not ss.live:
                     time.sleep(REPLAY_PACE_S)
+            # While the next step runs, the agent that owns it is "typing".
+            typing = None if pending else core.next_agent(ss.graph, ss.run_id)
+            if typing:
+                chat_box.markdown(chat.render(ss.transcript, typing=typing), unsafe_allow_html=True)
+                if not ss.live:
+                    time.sleep(REPLAY_PACE_S)
     except LLMError as err:
         ss.message = f"The live model failed ({str(err)[:200]}). Free-tier quota may be used up; try Replay."
         return

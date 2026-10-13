@@ -187,6 +187,19 @@ def drive(graph, run_id: str, payload):
         yield node, (update.get(node) or {}) if node else {}, graph.get_state(config).values, pending
 
 
+AGENT_OF_NODE = {"investigate": "scout", "run_tools": "scout", "diagnose": "scout", "review": "skeptic", "review_tools": "skeptic"}
+
+
+def next_agent(graph, run_id: str) -> str | None:
+    """Which agent works next ('scout' / 'skeptic'), from the graph's own list of next nodes."""
+    from triage.agent.graph import thread_config
+
+    for node in graph.get_state(thread_config(run_id)).next:
+        if node in AGENT_OF_NODE:
+            return AGENT_OF_NODE[node]
+    return None
+
+
 def resume_payload(approved: bool, note: str):
     from langgraph.types import Command
 
