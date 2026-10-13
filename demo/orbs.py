@@ -23,13 +23,30 @@ import json
 FACE = '<i class="eyes"><i class="eye l"></i><i class="eye r"></i></i>'
 
 ORB_CSS = """
+/* the round space around each bot; its ring color shows the state (nothing rotates) */
+.pod {--ring: #8888; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center;
+      justify-content: center; position: relative; vertical-align: middle; margin-right: 8px; flex: none;
+      border: 2px solid var(--ring); transition: border-color .4s, box-shadow .4s;}
+.pod.md {width: 46px; height: 46px;}
+.pod.lg {width: 64px; height: 64px; margin-right: 12px;}
+.pod.xl {width: 104px; height: 104px; margin: 0; border-width: 3px;}
+.pod.scout {--ring: #3f8cff66; background: radial-gradient(circle at 50% 40%, #1d3f8a55, #0b183a33 70%);}
+.pod.skeptic {--ring: #ff5c8a66; background: radial-gradient(circle at 50% 40%, #7a1d4855, #2a0a1a33 70%);}
+.pod.think, .pod.read, .pod.suspicious {animation: pod-pulse 1.4s ease-in-out infinite;}
+.pod.scout.think, .pod.scout.read {--ring: #4aa3ff;} .pod.skeptic.think, .pod.skeptic.read, .pod.skeptic.suspicious {--ring: #ff7aa0;}
+.pod.talk {--ring: #ffffffcc;}
+.pod.happy {--ring: #2fd18a; box-shadow: 0 0 12px #2fd18a66;}
+.pod.doubt {--ring: #ff3b5c; box-shadow: 0 0 12px #ff3b5c77;}
+@keyframes pod-pulse {0%, 100% {box-shadow: 0 0 0 0 transparent;} 50% {box-shadow: 0 0 0 4px #ffffff14, 0 0 10px var(--ring);}}
+
 .orb {--lw: 2px; width: 22px; height: 22px; display: inline-block; position: relative; vertical-align: middle;
-      margin-right: 8px; flex: none; border-radius: 34%;
+      flex: none; border-radius: 34%;
       transition: border-radius .5s ease, transform .5s ease, box-shadow .4s ease;
       animation: bot-float 3.4s ease-in-out infinite;}
-.orb.md {width: 32px; height: 32px;}
-.orb.lg {width: 46px; height: 46px; margin-right: 12px; --lw: 2.5px;}
-.orb.xl {width: 74px; height: 74px; margin: 0; --lw: 3.5px;}
+.orb {width: 66%; height: 66%;}
+.orb.md {--lw: 2px;}
+.orb.lg {--lw: 2.5px;}
+.orb.xl {--lw: 3.5px;}
 .orb i {position: absolute; display: block; font-style: normal;}
 
 /* bodies: soft gradient, gentle glow, no moving lights */
@@ -99,13 +116,14 @@ ORB_CSS = """
 @keyframes bot-hop {0%, 100% {transform: translateY(0);} 40% {transform: translateY(-24%);}}
 @keyframes bot-shake {0%, 100% {transform: translateX(0);} 25% {transform: translateX(-10%);} 75% {transform: translateX(10%);}}
 @media (prefers-reduced-motion: reduce) {
-  .orb, .orb * {animation: none !important; transition: none !important;}
+  .pod, .orb, .orb * {animation: none !important; transition: none !important;}
 }
 """
 
 
 def orb_html(agent: str, mood: str = "", size: str = "") -> str:
-    return f'<span class="orb {agent} {mood} {size}" aria-hidden="true">{FACE}</span>'
+    """The bot inside its round space. Mood classes go on both: the ring shows the state, the bot the face."""
+    return f'<span class="pod {agent} {mood} {size}" aria-hidden="true"><span class="orb {agent} {mood} {size}">{FACE}</span></span>'
 
 
 LINES = {
@@ -167,8 +185,9 @@ try {{  // also follow the mouse over the rest of the page (same-origin frame)
 for (const bot of document.querySelectorAll(".bot")) {{
   const o = bot.querySelector(".orb"), say = bot.querySelector(".say"), agent = bot.dataset.agent;
   let i = 0, timer;
-  bot.addEventListener("mouseenter", () => o.classList.add("surprised"));
-  bot.addEventListener("mouseleave", () => o.classList.remove("surprised"));
+  const pod = o.closest(".pod");
+  bot.addEventListener("mouseenter", () => {{ o.classList.add("surprised"); pod.classList.add("talk"); }});
+  bot.addEventListener("mouseleave", () => {{ o.classList.remove("surprised"); pod.classList.remove("talk"); }});
   bot.addEventListener("click", () => {{
     o.classList.remove("pop"); void o.offsetWidth; o.classList.add("pop");
     say.textContent = LINES[agent][i++ % LINES[agent].length];

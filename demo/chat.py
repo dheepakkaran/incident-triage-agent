@@ -163,7 +163,7 @@ CHAT_CSS = """
 <style>
 .chat {display: flex; flex-direction: column; gap: 10px; margin: 6px 0 14px;}
 .msg {display: flex; align-items: flex-start; gap: 10px; max-width: 92%;}
-.msg .orb {margin-top: 6px;}
+.msg .pod {margin-top: 2px;}
 .msg.human {align-self: flex-end; flex-direction: row;}
 .msg.human .me {font-size: 22px; margin-top: 4px;}
 .bubble {border-radius: 14px; padding: 9px 13px; line-height: 1.45; border: 1px solid #8883; overflow-wrap: anywhere;}
