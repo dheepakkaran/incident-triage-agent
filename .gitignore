@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets
+.env
+
+# Data, run logs and caches are produced by scripts, never committed
+/data/
+/runs/
+/.cache/
+
+# Local tooling
+.DS_Store
+.idea/
+.vscode/
+.claude/
