@@ -45,7 +45,7 @@ def export_replays(results_file: Path, runs_dir: Path, out: Path) -> list[str]:
         replay = {
             "case_id": trace["case_id"],
             "config": {**trace["config"], "provider_chain": [f"{data['provider']}:{data['model']}"]},
-            "llm_calls": [{"purpose": c["purpose"], "reply": c["reply"]} for c in trace["llm_calls"]],
+            "llm_calls": [{"purpose": c["purpose"], "reply": c["reply"], "latency_s": c["latency_s"]} for c in trace["llm_calls"]],
             "recorded_status": trace["status"],
             "source": results_file.name,
         }
