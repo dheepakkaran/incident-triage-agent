@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel
 
-from triage.guardrails.input import sanitize_text
+from triage.guardrails.input import REMOVED, sanitize_text
 from triage.guardrails.process import truncate
 from triage.tools.db import ToolContext
 from triage.tools.logs import QueryLogsArgs, query_logs
@@ -55,8 +55,13 @@ def tool_schemas(names: list[str]) -> list[dict]:
 
 
 def run_tool(name: str, ctx: ToolContext, args: BaseModel) -> tuple[str, bool, list[str]]:
-    """Run a validated call. Returns (text the model will see, truncated?, removed injection lines)."""
+    """Run a validated call. Returns (text the model will see, truncated?, removed injection lines).
+
+    query_logs already sanitizes its own sample lines; those show up here as REMOVED markers,
+    so they are counted too and the guardrail event is never lost.
+    """
     raw = TOOLS[name].func(ctx, args)
+    removed_inside = [f"(removed inside {name})"] * raw.count(REMOVED)
     clean, removed = sanitize_text(raw)
     text, truncated = truncate(clean)
-    return text, truncated, removed
+    return text, truncated, removed_inside + removed
