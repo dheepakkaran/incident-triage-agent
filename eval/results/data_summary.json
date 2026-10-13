@@ -1,0 +1,47 @@
+{
+  "dataset": "RCAEval RE2-OB (Online Boutique)",
+  "cases": 20,
+  "splits": {
+    "dev": 5,
+    "test": 15
+  },
+  "fault_types_per_split": {
+    "dev": {
+      "cpu": 1,
+      "delay": 1,
+      "disk": 1,
+      "loss": 1,
+      "mem": 1
+    },
+    "test": {
+      "cpu": 3,
+      "delay": 2,
+      "disk": 2,
+      "loss": 2,
+      "mem": 2,
+      "socket": 4
+    }
+  },
+  "root_cause_services_overall": {
+    "checkoutservice": 4,
+    "currencyservice": 4,
+    "emailservice": 4,
+    "productcatalogservice": 4,
+    "recommendationservice": 4
+  },
+  "rows": {
+    "metrics": 172968,
+    "logs": 472015,
+    "spans": 1236461
+  },
+  "masked_fault_markers": {
+    "metrics": 0,
+    "logs": 0,
+    "spans": 0
+  },
+  "window_seconds_each_side": 600,
+  "metric_step_seconds": 10,
+  "log_bucket_seconds": 10,
+  "trace_sample_every": 5,
+  "db_size_mb": 261.0
+}
