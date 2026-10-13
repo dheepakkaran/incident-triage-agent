@@ -47,10 +47,15 @@ MAX_JSON_RETRIES = 2  # structured output: 1 try + 2 retries with the error mess
 class Deps:
     """Things nodes need that are not state: the LLM client and settings."""
 
-    llm: LLMClient
+    llm: LLMClient  # Scout (investigator)
     settings: Settings
     reviewer_enabled: bool
     extras: dict = field(default_factory=dict)
+    reviewer_llm: LLMClient | None = None  # Skeptic (reviewer); None = same client as Scout
+
+    @property
+    def review_llm(self) -> LLMClient:
+        return self.reviewer_llm or self.llm
 
 
 # ---- small helpers -------------------------------------------------------
@@ -73,7 +78,7 @@ def _escalate(reason: str, events: list | None = None, **extra) -> dict:
     return {"escalation_reason": reason, "guardrail_events": events or [], **extra}
 
 
-def _structured_call(deps: Deps, messages: list, schema, check, purpose: str, state: dict, first_reply=None):
+def _structured_call(deps: Deps, messages: list, schema, check, purpose: str, state: dict, first_reply=None, llm=None):
     """Ask for JSON, parse it with Pydantic, run `check` (extra guardrails), retry with the error.
 
     `first_reply` lets a caller pass a reply it already has (the reviewer's last turn) as attempt 1.
@@ -84,7 +89,7 @@ def _structured_call(deps: Deps, messages: list, schema, check, purpose: str, st
         if attempt == 0 and first_reply is not None:
             reply = first_reply
         else:
-            reply, record = deps.llm.invoke(messages, purpose=f"{purpose}#{attempt + 1}")
+            reply, record = (llm or deps.llm).invoke(messages, purpose=f"{purpose}#{attempt + 1}")
             records.append(record)
         parsed, error = parse_structured(reply.content, schema)
         check_name = "schema"
@@ -289,7 +294,7 @@ def review(state: dict, deps: Deps) -> dict:
     budget_left = deps.settings.reviewer_max_tool_calls - used
     try:
         tools = tool_schemas(REVIEWER_TOOLS) if budget_left > 0 else None
-        reply, record = deps.llm.invoke(messages, tools=tools, purpose="review")
+        reply, record = deps.review_llm.invoke(messages, tools=tools, purpose="review")
     except LLMError as err:
         return {**_escalate(f"LLM unavailable during review: {err}"), **_step("review", started, error=True)}
 
@@ -319,7 +324,7 @@ def review(state: dict, deps: Deps) -> dict:
 
     try:
         verdict, error, records, events = _structured_call(
-            deps, messages, ReviewVerdict, check, "review", state, first_reply=reply
+            deps, messages, ReviewVerdict, check, "review", state, first_reply=reply, llm=deps.review_llm
         )
     except LLMError as err:
         return {**_escalate(f"LLM unavailable during review: {err}"), **_step("review", started, error=True)}

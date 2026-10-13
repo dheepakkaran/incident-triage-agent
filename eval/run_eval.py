@@ -76,8 +76,9 @@ def summarize(rows: list[dict]) -> dict:
 def run_eval(split: str, reviewer: str | None = None, provider: str | None = None) -> dict:
     settings = get_settings()
     reviewer_enabled = settings.reviewer_enabled if reviewer is None else reviewer == "on"
-    llm = LLMClient.from_settings(settings, only=provider)
-    deps = Deps(llm=llm, settings=settings, reviewer_enabled=reviewer_enabled)
+    llm = LLMClient.from_settings(settings, only=provider, role="investigator")
+    reviewer_llm = LLMClient.from_settings(settings, only=provider, role="reviewer")
+    deps = Deps(llm=llm, reviewer_llm=reviewer_llm, settings=settings, reviewer_enabled=reviewer_enabled)
     graph = build_graph(deps)
     labels = load_labels()
     runbook_faults = {rb_id: book["fault_type"] for rb_id, book in load_runbooks().items()}
@@ -107,6 +108,8 @@ def run_eval(split: str, reviewer: str | None = None, provider: str | None = Non
         "provider": llm.primary.provider,
         "model": llm.primary.model,
         "provider_chain": [f"{h.provider}:{h.model}" for h in llm.handles],
+        "reviewer_model": f"{reviewer_llm.primary.provider}:{reviewer_llm.primary.model}" if reviewer_enabled else None,
+        "reviewer_provider_chain": [f"{h.provider}:{h.model}" for h in reviewer_llm.handles],
         "prompt_version": PROMPT_VERSION,
         "temperature": 0,
         "reviewer_enabled": reviewer_enabled,

@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 DB_PATH = HERE / "data" / "telemetry.db"
 DB_REPO = os.getenv("DEMO_DB_REPO", "dheepakkaran/incident-triage-telemetry")  # a public HF *dataset*
 LIVE_PER_SESSION = int(os.getenv("LIVE_RUNS_PER_SESSION", "3"))
-LIVE_PER_DAY = int(os.getenv("LIVE_RUNS_PER_DAY", "50"))
+LIVE_PER_DAY = int(os.getenv("LIVE_RUNS_PER_DAY", "12"))  # Groq free tier ≈ 11-14 full cases a day
 # Replay plays each model call back at 4x its recorded speed (0.5 s to 2.5 s), so the
 # "typing" bubble lasts about as long, relatively, as the model really thought.
 REPLAY_SPEEDUP, REPLAY_MIN_S, REPLAY_MAX_S = 4.0, 0.5, 2.5
@@ -49,7 +49,8 @@ def configure_environment() -> int:
     os.environ.setdefault("CACHE_DIR", "/tmp/triage-demo/cache")
     os.environ.setdefault("RUNBOOKS_DIR", str(HERE.parent / "runbooks"))
     os.environ.setdefault("LLM_CACHE_ENABLED", "false")
-    os.environ.setdefault("LLM_PROVIDER_CHAIN", "groq")
+    os.environ.setdefault("INVESTIGATOR_PROVIDER_CHAIN", "groq")  # Scout
+    os.environ.setdefault("REVIEWER_PROVIDER_CHAIN", "google,groq")  # Skeptic: Gemma, Groq if Google is down
     # The project default is reviewer OFF (dev ablation). The demo exists to show the two agents
     # working together, so it turns the reviewer on; replays come from the reviewer-on test run.
     os.environ.setdefault("REVIEWER_ENABLED", "true")
@@ -168,16 +169,21 @@ def start_run(case_id: str, mode: str, replay: dict):
     from triage.llm.providers import LLMClient, ModelHandle
 
     settings = get_settings()
+    reviewer_llm = None
     if mode == "live":
-        llm = LLMClient.from_settings(settings, only="groq")
+        llm = LLMClient.from_settings(settings, role="investigator")
+        reviewer_llm = LLMClient.from_settings(settings, role="reviewer")
         reviewer = settings.reviewer_enabled
-        description = f"Live run on groq:{settings.groq_model}"
+        description = (
+            f"Live: Scout on {llm.primary.provider}:{llm.primary.model}, "
+            f"Skeptic on {reviewer_llm.primary.provider}:{reviewer_llm.primary.model}"
+        )
     else:
         model = replay["config"]["provider_chain"][0]
         llm = LLMClient([ModelHandle("replay", model, ReplayChatModel(replay["llm_calls"], pace=True))], cache=None)
         reviewer = replay["config"]["reviewer_enabled"]
         description = f"Replay of the recorded eval run ({model}, prompt {replay['config']['prompt_version']}); no API calls"
-    deps = Deps(llm=llm, settings=settings, reviewer_enabled=reviewer)
+    deps = Deps(llm=llm, reviewer_llm=reviewer_llm, settings=settings, reviewer_enabled=reviewer)
     graph = build_graph(deps, InMemorySaver())
     return graph, initial_state(case_id, deps, auto_approve=False), description
 

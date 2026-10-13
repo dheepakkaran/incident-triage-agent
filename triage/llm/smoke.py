@@ -11,9 +11,19 @@ from triage.tools import tool_schemas
 
 
 def smoke_llm() -> None:
+    """One tool-calling request per agent (Scout's chain, then Skeptic's), each sent twice."""
     console = Console()
-    client = LLMClient.from_settings()
-    console.print("Providers available: " + ", ".join(f"{h.provider}:{h.model}" for h in client.handles))
+    for role, name in (("investigator", "Scout"), ("reviewer", "Skeptic")):
+        try:
+            client = LLMClient.from_settings(role=role)
+        except Exception as err:  # no provider available for this role
+            console.print(f"[red]{name}: {err}[/red]")
+            continue
+        console.print(f"[bold]{name}[/bold] ({role}) providers: " + ", ".join(f"{h.provider}:{h.model}" for h in client.handles))
+        _check(console, client)
+
+
+def _check(console: Console, client: LLMClient) -> None:
     messages = [
         SystemMessage("You are testing tool calling. Call the tool you are asked to call."),
         HumanMessage("Call get_metric_changes for the service 'frontend' with top_n 5."),

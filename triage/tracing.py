@@ -95,6 +95,7 @@ def write_run_files(state: dict, deps) -> dict:
         "config": {
             "prompt_version": PROMPT_VERSION,
             "provider_chain": [f"{h.provider}:{h.model}" for h in deps.llm.handles],
+            "reviewer_provider_chain": [f"{h.provider}:{h.model}" for h in deps.review_llm.handles],
             "temperature": 0,
             "max_tool_calls": settings.max_tool_calls,
             "reviewer_enabled": deps.reviewer_enabled,

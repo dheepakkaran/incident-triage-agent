@@ -215,6 +215,7 @@ pytest -q                               # no network, no LLM, no dataset needed
 - **Replay mode** runs the real graph on the model replies recorded in the test run, with no API calls. The approval gate still pauses with `interrupt()` and resumes with `Command(resume=...)`.
 - **Live mode** uses Groq: 3 runs per session and a daily cap, and the key never reaches the browser.
 - **Rebuilding:** `python demo/build.py --results eval/results/<test run>.json [--upload]` rebuilds the replays and the trimmed test-split DB. `--upload` publishes the DB to a public Hugging Face dataset, because it is too big for GitHub.
+- **Data for the demo:** the trimmed test-split DB lives at [huggingface.co/datasets/dheepakkaran/incident-triage-telemetry](https://huggingface.co/datasets/dheepakkaran/incident-triage-telemetry) (CC-BY-4.0, RCAEval credited). The app downloads it on first start.
 - **Why not a Hugging Face Space, as first planned:** new Gradio Spaces on free CPU now need a PRO plan (the API returned `402`), and the account's two free ZeroGPU slots were in use.
 
 ## 9. Data credit
