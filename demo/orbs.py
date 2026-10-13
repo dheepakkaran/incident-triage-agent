@@ -154,7 +154,7 @@ LINES = {
 
 
 BOX_CSS = """
-.botboxes {display: flex; gap: 14px; margin: 6px 0 4px;}
+.botboxes {display: flex; gap: 14px; margin: 0 0 4px; align-items: stretch;}
 .botbox {flex: 1; display: flex; gap: 16px; align-items: center; padding: 16px 18px; border-radius: 18px;
          border: 1px solid #8884; background: linear-gradient(160deg, #ffffff0c, #ffffff03); cursor: pointer;
          user-select: none; transition: border-color .4s, box-shadow .4s;}
@@ -162,13 +162,15 @@ BOX_CSS = """
 .botbox.skeptic.active {border-color: #ff5c8a99; box-shadow: 0 0 0 1px #ff5c8a33, 0 8px 28px #ff4f8b22;}
 .botbox .pod {margin: 0;}
 .botbox .body {flex: 1; min-width: 0;}
-.botbox .name {font-weight: 700;} .botbox .role {opacity: .65; font-weight: 400;}
-.botbox .say {position: relative; margin: 8px 0 6px; padding: 9px 12px; border-radius: 4px 14px 14px 14px;
-              background: #ffffff10; border: 1px solid #8883; line-height: 1.4; min-height: 2.8em;}
+.botbox .name {font-weight: 700; font-size: 1rem;} .botbox .role {opacity: .6; font-weight: 400; font-size: .85rem;}
+.botbox .say {position: relative; margin: 8px 0 8px; padding: 10px 13px; border-radius: 4px 14px 14px 14px;
+              background: #ffffff10; border: 1px solid #8883; line-height: 1.45; min-height: 4.4em; font-size: .92rem;}
 .botbox.scout .say {background: #1f6bff1c; border-color: #3fc6ff44;}
 .botbox.skeptic .say {background: #ff4f8b17; border-color: #ff4f8b44;}
 .botbox .say.fresh {animation: say-in .35s ease-out;}
-.botbox .line {font-size: .8rem; opacity: .75;}
+.botbox .line {display: flex; flex-wrap: wrap; gap: 6px;}
+.botbox .chip {font-size: .72rem; font-weight: 500; padding: 2px 9px; border-radius: 99px; border: 1px solid #8b95a744;
+               color: #8b95a7; background: #8b95a70d;}
 .botbox:hover .orb .eye {height: 32%; width: 22%; top: 30%; border-radius: 50%;}
 .botbox.light {background: #fff;}
 .botbox.light.scout .say {background: #eaf2ff; border-color: #b9d3ff;}
@@ -193,11 +195,12 @@ def boxes_html(status: dict, active: str | None, light: bool, fresh: set[str]) -
     for agent, name, role in (("scout", "Scout", "investigator"), ("skeptic", "Skeptic", "reviewer")):
         st = status[agent]
         classes = f"botbox {agent}{' active' if active == agent else ''}{' light' if light else ''}"
+        chips = "".join(f'<span class="chip">{html.escape(part)}</span>' for part in st["line"].split(" · "))
         cards.append(
             f'<div class="{classes}" data-agent="{agent}">{orb_html(agent, st["mood"] + " badge", "xl")}'
             f'<div class="body"><div><span class="name">{name}</span> <span class="role">· {role}</span></div>'
             f'<div class="say{" fresh" if agent in fresh else ""}">{html.escape(st["say"])}</div>'
-            f'<div class="line">{html.escape(st["line"])}</div></div></div>'
+            f'<div class="line">{chips}</div></div></div>'
         )
     return '<div class="botboxes">' + "".join(cards) + "</div>"
 

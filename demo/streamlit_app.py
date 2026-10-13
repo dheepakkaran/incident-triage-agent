@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "demo"))
 import chat  # noqa: E402
 import core  # noqa: E402
 import orbs  # noqa: E402
+import theme  # noqa: E402
 
 THREADS = core.configure_environment()
 
@@ -37,6 +38,7 @@ st.set_page_config(page_title="Incident triage agent", page_icon="🚨", layout=
 ORB_CSS = "<style>" + orbs.ORB_CSS + orbs.BOX_CSS + """
 .orb-h {display: flex; align-items: center; font-size: 1.35rem; font-weight: 600; margin: 1.2rem 0 .4rem;}
 </style>"""
+st.markdown(theme.APP_CSS, unsafe_allow_html=True)
 st.markdown(ORB_CSS, unsafe_allow_html=True)
 st.markdown(chat.CHAT_CSS, unsafe_allow_html=True)
 
@@ -130,7 +132,7 @@ def run_graph(payload, chat_box, boxes_box) -> None:
 
 def start(case_id: str, mode: str, chat_box, boxes_box) -> None:
     settings = get_settings()
-    live = mode == "Run live"
+    live = mode == "Live"
     if live and not settings.groq_api_key:
         live, ss.message = False, "Live mode is off here (no GROQ_API_KEY secret). Showing the replay instead."
     elif live and ss.live_runs >= core.LIVE_PER_SESSION:
@@ -251,31 +253,39 @@ def show_report(values: dict) -> None:
 
 # ---- page ----------------------------------------------------------------
 
-st.title("🚨 Incident triage agent")
-st.caption("First-pass root-cause analysis with LangGraph, guardrails, a reviewer agent and a human approval gate. Nothing is ever executed.")
+st.markdown(theme.hero_html(), unsafe_allow_html=True)
 st.html(orbs.bot_script(), unsafe_allow_javascript=True)  # our own static script: eyes + click reactions
 
 cases = sorted(REPLAYS)
-left, mid, right = st.columns([2, 2, 1], vertical_alignment="bottom")
-case_id = left.selectbox("Test case", cases)
-mode = mid.radio("Mode", ["Replay", "Run live"], horizontal=True)
-# Clicks are recorded once by callbacks and consumed here. A plain `if st.button(...)` can
-# fire again when a long replay is interrupted by another widget change.
-right.button("Run", type="primary", use_container_width=True, on_click=lambda: ss.update(run_request=True))
-caption = st.empty()
+with st.container(border=True):
+    left, mid, right = st.columns([2.2, 1.6, 1], vertical_alignment="bottom")
+    case_id = left.selectbox("Test case", cases, help="The 15 held-out test cases (case_006 to case_020).")
+    mode = mid.segmented_control(
+        "Mode", ["Replay", "Live"], default="Replay", selection_mode="single",
+        help="Replay: the recorded eval run, no API calls. Live: Groq, rate limited.",
+    ) or "Replay"
+    # Clicks are recorded once by callbacks and consumed here. A plain `if st.button(...)` can
+    # fire again when a long replay is interrupted by another widget change.
+    right.button("Run triage", type="primary", use_container_width=True, icon=":material/play_arrow:",
+                 on_click=lambda: ss.update(run_request=True))
+    caption = st.empty()
 if ss.run_values and ss.run_values.get("case_id") != case_id:  # a new case was picked: the bots start fresh
     ss.run_values, ss.transcript, ss.pending = {}, [], None
+
+st.markdown(theme.label("Agents"), unsafe_allow_html=True)
 boxes_box = st.empty()
 
+st.markdown(theme.label("Details"), unsafe_allow_html=True)
 triage_tab, hood_tab, results_tab, guard_tab, about_tab = st.tabs(
-    ["💬 Triage", "🔧 Under the hood", "Results", "Guardrails", "About"]
+    [":material/forum: Conversation", ":material/account_tree: Under the hood", ":material/monitoring: Results",
+     ":material/shield: Guardrails", ":material/info: About"]
 )
 
 with triage_tab:
     chat_box = st.empty()
     if ss.pop("run_request", False):
         start(case_id, mode, chat_box, boxes_box)
-    caption.caption(ss.message or "Replay runs the real agent graph on the model replies recorded in the eval. No API calls.")
+    caption.markdown(f'<div class="hint">{html.escape(ss.message or "Replay runs the real agent graph on the model replies recorded in the eval. No API calls.")}</div>', unsafe_allow_html=True)
 
     values = ss.run_values if ss.run_values.get("case_id") == case_id else {}
     if values and ss.transcript:
@@ -291,17 +301,25 @@ with triage_tab:
 
     pending = ss.pending if values else None
     if pending:
-        st.markdown(f"**🙋 Your call:** approve **{pending['action']}({pending['target_service']})**?")
-        note_key = f"note-{ss.run_id}-{len(ss.transcript)}"
-        st.text_input("Note for Scout (optional)", key=note_key)
-        yes, no, _ = st.columns([1, 1, 3])
-        yes.button("✅ Approve", use_container_width=True, on_click=lambda: ss.update(decision={"approved": True, "note": ss.get(note_key, "")}))
-        no.button("❌ Reject", use_container_width=True, on_click=lambda: ss.update(decision={"approved": False, "note": ss.get(note_key, "")}))
+        with st.container(border=True):
+            st.markdown(
+                '<div class="approval-title">Approval required</div>'
+                f'<div class="approval-action">{html.escape(pending["action"])}({html.escape(pending["target_service"])})</div>'
+                f'<div class="hint">Runbook <code>{html.escape(pending["runbook_id"])}</code> · {html.escape(pending["reason"])}</div>',
+                unsafe_allow_html=True,
+            )
+            note_key = f"note-{ss.run_id}-{len(ss.transcript)}"
+            st.text_input("Note for Scout (optional)", key=note_key, placeholder="e.g. check the disk metrics again")
+            yes, no, _ = st.columns([1, 1, 3])
+            yes.button("Approve", type="primary", use_container_width=True, icon=":material/check:",
+                       on_click=lambda: ss.update(decision={"approved": True, "note": ss.get(note_key, "")}))
+            no.button("Reject", use_container_width=True, icon=":material/close:",
+                      on_click=lambda: ss.update(decision={"approved": False, "note": ss.get(note_key, "")}))
 
     if values.get("report"):
-        with st.expander("📄 Incident report", expanded=not pending):
+        with st.expander("Incident report", expanded=not pending, icon=":material/description:"):
             show_report(values)
-    with st.expander("Simulated action log"):
+    with st.expander("Simulated action log", icon=":material/receipt_long:"):
         st.code("\n".join(ss.actions) or "(nothing executed: approved actions are only logged here)", language=None)
 
 with hood_tab:

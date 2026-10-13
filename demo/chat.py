@@ -202,7 +202,7 @@ def render(transcript: list, typing: str | None = None, light: bool = False) -> 
         elif who == "summary":
             parts.append(f'<div class="summary{new}">{text}</div>')
         elif who == "alert":
-            parts.append(f'<div class="msg alert"><div class="bubble">🚨 <b>Alert</b> · {text}</div></div>')
+            parts.append(f'<div class="msg alert"><div class="bubble"><span class="alabel">ALERT</span>{text}</div></div>')
         else:
             parts.append(f'<div class="sys{new}">{text}</div>')
     if typing in WHO:
@@ -217,19 +217,22 @@ def render(transcript: list, typing: str | None = None, light: bool = False) -> 
 
 CHAT_CSS = """
 <style>
-.chat {display: flex; flex-direction: column; gap: 10px; margin: 6px 0 14px;}
-.msg {display: flex; align-items: flex-start; gap: 10px; max-width: 92%;}
+.chat {display: flex; flex-direction: column; gap: 12px; margin: 4px 0 16px; max-width: 920px;}
+.msg {display: flex; align-items: flex-start; gap: 12px; max-width: 94%;}
 .msg .pod {margin-top: 2px;}
 .msg.human {align-self: flex-end; flex-direction: row;}
 .msg.human .me {font-size: 22px; margin-top: 4px;}
-.bubble {border-radius: 14px; padding: 9px 13px; line-height: 1.45; border: 1px solid #8883; overflow-wrap: anywhere;}
+.bubble {border-radius: 4px 14px 14px 14px; padding: 10px 14px; line-height: 1.5; border: 1px solid #8883;
+         overflow-wrap: anywhere; font-size: .93rem;}
 .msg.scout .bubble {background: #1f6bff1c; border-color: #3fc6ff55;}
 .msg.skeptic .bubble {background: #ff4f8b17; border-color: #ff4f8b55;}
 .msg.human .bubble {background: #8882;}
 .msg.alert {max-width: 100%; width: 100%;}
-.msg.alert .bubble {background: #e8a33c22; border-color: #e8a33c66; width: 100%;}
-.who {font-weight: 600; font-size: .85rem; margin-bottom: 2px;}
-.who small {font-weight: 400; opacity: .7;}
+.msg.alert .bubble {background: #e8a33c14; border: 1px solid #e8a33c55; border-left: 4px solid #e8a33c; border-radius: 10px;
+                    width: 100%; font-weight: 500;}
+.alabel {font-size: .68rem; font-weight: 700; letter-spacing: .1em; color: #e8a33c; margin-right: 10px;}
+.who {font-weight: 600; font-size: .8rem; margin-bottom: 3px; letter-spacing: .01em;}
+.who small {font-weight: 400; opacity: .65;}
 .bubble ul {margin: 4px 0 2px 1.1rem; padding: 0;}
 .bubble code {font-size: .8rem;}
 .muted {opacity: .75; font-size: .9rem;}
@@ -237,7 +240,8 @@ CHAT_CSS = """
 .snip pre {margin: 2px 0 0; padding: 6px 8px; border-radius: 8px; background: #8881; font-size: .74rem; white-space: pre-wrap;}
 .tid {display: inline-block; font-family: ui-monospace, monospace; font-size: .72rem; padding: 0 6px;
       border-radius: 6px; background: #8883;}
-.sys {align-self: center; text-align: center; font-size: .82rem; opacity: .85; max-width: 90%;}
+.sys {align-self: center; text-align: center; font-size: .78rem; max-width: 86%; padding: 4px 12px; border-radius: 99px;
+       border: 1px solid #8b95a733; background: #8b95a70d; color: inherit; opacity: .9;}
 .new {animation: msg-pop .35s ease-out;}
 /* confidence meter */
 .meter {display: flex; align-items: center; gap: 8px; margin: 6px 0 2px;}
@@ -350,7 +354,7 @@ def bot_status(values: dict, transcript: list, typing: str | None, pending: dict
         scout = (last[1] or "think", verb + _plain(last[0], 120))
     else:
         scout = ("think", "Looking at the alert…")
-    scout_line = f"🔎 {scout_checks} checks · 🎯 {top.get('service', '—') if top else '—'}"
+    scout_line = f"{scout_checks} checks · suspect {top.get('service', '—') if top else '—'}"
 
     # Skeptic
     last = _latest(transcript, "skeptic")
@@ -371,7 +375,7 @@ def bot_status(values: dict, transcript: list, typing: str | None, pending: dict
     else:
         skeptic = ("read", "Watching Scout work… I'll review the diagnosis when it's ready.")
     verdicts = " → ".join(r["verdict"] for r in reviews) or "no verdict yet"
-    skeptic_line = f"🧐 {verdicts} · {skeptic_checks} checks"
+    skeptic_line = f"{'verdict ' + verdicts if reviews else verdicts} · {skeptic_checks} checks"
 
     return {
         "scout": {"mood": scout[0], "say": scout[1], "line": scout_line},

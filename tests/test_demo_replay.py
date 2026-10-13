@@ -122,6 +122,7 @@ def test_bots_tell_the_user_where_things_stand():
     now = chat.bot_status(values, transcript, None, None, True)
     assert now["scout"]["say"] == "I think it's cartservice: a cpu problem. I'm 90% sure."
     assert now["skeptic"]["say"].startswith("I agree with Scout ✅")
+    assert now["scout"]["line"] == "1 checks · suspect cartservice"
     pending = {"action": "scale_service", "target_service": "cartservice"}
     assert "your call" in chat.bot_status(values, transcript, None, pending, True)["scout"]["say"]
     assert "switched off" in chat.bot_status(values, transcript, None, None, False)["skeptic"]["say"]
