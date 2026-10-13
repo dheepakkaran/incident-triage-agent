@@ -130,3 +130,19 @@ def offline(monkeypatch, fixture_db, tmp_path):
     monkeypatch.setenv("REVIEWER_ENABLED", "true")
     monkeypatch.setenv("GROQ_API_KEY", "")
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
+
+
+@pytest.fixture
+def mock_deps_factory():
+    """Build agent Deps around a ScriptedChatModel. The model is at deps.extras['model']."""
+    from triage.agent.nodes import Deps
+    from triage.config import get_settings
+    from triage.llm.mock import ScriptedChatModel
+    from triage.llm.providers import LLMClient, ModelHandle
+
+    def make(script, reviewer: bool = True):
+        model = ScriptedChatModel(script)
+        llm = LLMClient([ModelHandle("mock", "scripted", model)], cache=None)
+        return Deps(llm=llm, settings=get_settings(), reviewer_enabled=reviewer, extras={"model": model})
+
+    return make
