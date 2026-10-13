@@ -20,3 +20,6 @@ venv/
 .idea/
 .vscode/
 .claude/
+
+# Space build output
+/space/dist/

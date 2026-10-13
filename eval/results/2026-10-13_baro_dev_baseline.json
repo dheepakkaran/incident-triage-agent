@@ -1,0 +1,104 @@
+{
+  "kind": "baseline",
+  "method": "BARO (RCAEval 1.8.0, metrics only)",
+  "date": "2026-10-13 00:53:00",
+  "split": "dev",
+  "metrics": {
+    "n": 5,
+    "top1": 0.4,
+    "top3": 0.8,
+    "fault_type": 0.4
+  },
+  "cases": [
+    {
+      "case_id": "case_001",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "emailservice",
+          "adservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_002",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice",
+          "redis",
+          "cartservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_003",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "frontend-external",
+          "productcatalogservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_004",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice",
+          "redis",
+          "checkoutservice"
+        ],
+        "fault_type": "mem"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_005",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "frontend",
+          "recommendationservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": false,
+      "fault_type_ok": false
+    }
+  ]
+}

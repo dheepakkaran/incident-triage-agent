@@ -1,7 +1,7 @@
 """All prompts in one place, short and versioned. Bump PROMPT_VERSION on any wording change:
 it is written into every report and eval result, so results can be traced to a prompt."""
 
-PROMPT_VERSION = "v2"
+PROMPT_VERSION = "v3"
 
 FAULT_TYPE_HINTS = """Latency rises in EVERY fault type, so latency alone is not evidence for "delay".
 Pick fault_type from the root-cause service's OWN metrics, checking in this order:
@@ -57,7 +57,9 @@ When done, reply with ONLY a JSON object:
 {{"verdict": "agree" or "revise", "suspected_service": "<service or null>", "reason": "<short>",
   "evidence": [{{"tool_call_id": "t1", "quote": "<text copied exactly from that tool output>"}}]}}
 
-Say "revise" only if you found concrete evidence that a different service is the cause, and cite it.
+Say "revise" only if you found concrete evidence that a different service is the cause, and cite it: that
+service's OWN cpu/memory/disk/sockets changed more, or the calls INTO it degraded more. A service that CALLS the
+diagnosed service is not a valid suspect: callers show the symptoms of their dependencies' faults.
 Otherwise say "agree" (evidence may be empty)."""
 
 ACTION_SYSTEM = """Pick one remediation for the on-call engineer. Nothing runs automatically: risky actions wait for

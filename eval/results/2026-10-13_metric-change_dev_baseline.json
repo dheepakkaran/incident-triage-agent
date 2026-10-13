@@ -1,7 +1,7 @@
 {
   "kind": "baseline",
   "method": "largest relative metric change",
-  "date": "2026-10-13 00:34:49",
+  "date": "2026-10-13 00:52:58",
   "split": "dev",
   "metrics": {
     "n": 5,
@@ -22,8 +22,7 @@
           "checkoutservice",
           "adservice"
         ],
-        "fault_type": "cpu",
-        "top_metric": "cpu_usage"
+        "fault_type": "cpu"
       },
       "top1": true,
       "top3": true,
@@ -41,8 +40,7 @@
           "recommendationservice",
           "frontend"
         ],
-        "fault_type": "disk",
-        "top_metric": "disk_io_bytes"
+        "fault_type": "disk"
       },
       "top1": true,
       "top3": true,
@@ -60,8 +58,7 @@
           "frontend",
           "recommendationservice"
         ],
-        "fault_type": "delay",
-        "top_metric": "latency_p90_s"
+        "fault_type": "delay"
       },
       "top1": true,
       "top3": true,
@@ -79,8 +76,7 @@
           "checkoutservice",
           "cartservice"
         ],
-        "fault_type": "delay",
-        "top_metric": "latency_p90_s"
+        "fault_type": "delay"
       },
       "top1": true,
       "top3": true,
@@ -98,8 +94,7 @@
           "frontend",
           "checkoutservice"
         ],
-        "fault_type": "delay",
-        "top_metric": "latency_p90_s"
+        "fault_type": "delay"
       },
       "top1": true,
       "top3": true,

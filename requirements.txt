@@ -31,3 +31,6 @@ httpx==0.28.1
 # Tests + lint
 pytest==9.1.1
 ruff==0.17.0
+
+# RCAEval itself, for its BARO baseline in eval/baseline.py (base install has no dependencies)
+RCAEval==1.8.0

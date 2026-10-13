@@ -113,5 +113,21 @@ def check_candidates(candidates: list, services: list[str]) -> list[str]:
     return errors
 
 
+# A resource fault must be backed by a quote of that resource's metric for the blamed service.
+FAULT_METRIC = {"cpu": "cpu_usage", "mem": "memory_bytes", "disk": "disk_io_bytes", "socket": "open_sockets"}
+
+
+def check_fault_evidence(candidates: list, evidence: list) -> list[str]:
+    if not candidates or candidates[0].fault_type not in FAULT_METRIC:
+        return []
+    top, metric = candidates[0], FAULT_METRIC[candidates[0].fault_type]
+    if any(top.service in normalize(e.quote) and metric in normalize(e.quote) for e in evidence):
+        return []
+    return [
+        f"fault_type '{top.fault_type}' needs a quote showing {top.service} {metric}; none of your quotes does. "
+        f"Quote that metric line, or pick the fault type your evidence supports"
+    ]
+
+
 def top_confidence(candidates: list) -> float:
     return max((c.confidence for c in candidates), default=0.0)
