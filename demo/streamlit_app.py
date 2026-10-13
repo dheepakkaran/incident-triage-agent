@@ -7,6 +7,7 @@ Live mode uses Groq through the server-side secret GROQ_API_KEY.
 """
 
 import html
+import logging
 import os
 import sys
 import time
@@ -24,6 +25,10 @@ import theme  # noqa: E402
 THREADS = core.configure_environment()
 
 import streamlit as st  # noqa: E402
+
+# The file watcher walks every loaded module; transformers' lazy vision modules raise because torchvision
+# is not installed, and each one logs a traceback. Harmless, so keep only real errors from the watcher.
+logging.getLogger("streamlit.watcher.local_sources_watcher").setLevel(logging.ERROR)
 
 # Secrets stay on the server: copy the key into the process environment, never into the page.
 try:
@@ -244,6 +249,23 @@ def show_reviewer(values: dict) -> None:
         st.caption("Outcome: Skeptic still said 'revise' after one revision round, so the case was escalated with both views.")
 
 
+def show_model_calls(values: dict) -> None:
+    """Which provider answered each agent's calls, so a fallback (say Gemma to Groq) is visible."""
+    rows: dict[tuple, dict] = {}
+    for call in values.get("llm_calls") or []:
+        agent = "Skeptic" if call.get("purpose", "").startswith("review") else "Scout"
+        row = rows.setdefault((agent, call["provider"], call["model"]), {
+            "agent": agent, "model": f"{call['provider']}:{call['model']}", "calls": 0, "tokens in/out": [0, 0], "time (s)": 0.0})
+        row["calls"] += 1
+        row["tokens in/out"][0] += call.get("input_tokens", 0)
+        row["tokens in/out"][1] += call.get("output_tokens", 0)
+        row["time (s)"] = round(row["time (s)"] + call.get("latency_s", 0.0), 1)
+    if not rows:
+        st.caption("No model calls yet.")
+        return
+    st.table([{**r, "tokens in/out": "{} / {}".format(*r["tokens in/out"]), "time (s)": f"{r['time (s)']:.1f}"} for r in rows.values()])
+
+
 def show_report(values: dict) -> None:
     path = ((values.get("report") or {}).get("paths") or {}).get("dir")
     if path and Path(path, "report.md").exists():
@@ -262,9 +284,9 @@ with st.container(border=True):
     left, mid, right = st.columns([2.2, 1.6, 1], vertical_alignment="bottom")
     case_id = left.selectbox("Test case", cases, help="The 15 held-out test cases (case_006 to case_020).")
     mode = mid.segmented_control(
-        "Mode", ["Replay", "Live"], default="Replay", selection_mode="single",
+        "Mode", ["Replay", "Live"], default="Replay", selection_mode="single", required=True,
         help="Replay: the recorded eval run, no API calls. Live: Groq, rate limited.",
-    ) or "Replay"
+    )  # required: clicking the selected option again keeps it instead of clearing both
     # Clicks are recorded once by callbacks and consumed here. A plain `if st.button(...)` can
     # fire again when a long replay is interrupted by another widget change.
     right.button("Run triage", type="primary", use_container_width=True, icon=":material/play_arrow:",
@@ -337,6 +359,8 @@ with hood_tab:
             show_diagnosis(hood_values)
             orb_heading("skeptic", "Skeptic's review")
             show_reviewer(hood_values)
+            st.subheader("Model calls")
+            show_model_calls(hood_values)
 
 with results_tab:
     st.markdown(RESULTS_MD.split("## Adversarial")[0] if RESULTS_MD else "No results file.")
