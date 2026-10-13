@@ -1,7 +1,10 @@
 # Streamlit settings for the demo (read from the repo root by `streamlit run demo/streamlit_app.py`
-# and by Streamlit Community Cloud).
-[theme]
+# and by Streamlit Community Cloud). Separate light/dark sections keep the system light/dark switch.
+[theme.light]
 primaryColor = "#3f7bff"
+
+[theme.dark]
+primaryColor = "#4a86ff"
 
 [client]
 toolbarMode = "minimal"
