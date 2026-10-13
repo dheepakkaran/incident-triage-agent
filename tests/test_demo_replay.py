@@ -13,6 +13,7 @@ from triage.llm.providers import LLMClient, ModelHandle
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "demo"))
 import core  # noqa: E402
+import orbs  # noqa: E402, F401
 
 
 def recorded_run(mock_deps_factory) -> dict:
@@ -74,3 +75,33 @@ def test_chat_view_tells_the_story_in_order(mock_deps_factory):
     assert "I agree." in text and "Waiting for your approval." in text
     assert 'class="orb scout' in text and 'class="orb skeptic' in text
     assert 'orb skeptic happy' in text  # Skeptic agreed, so it smiles
+
+
+def test_confidence_meter_levels_and_handoff_and_summary():
+    import chat
+
+    assert 'class="meter high"' in chat._confidence_meter(0.9)
+    assert 'class="meter mid"' in chat._confidence_meter(0.7)
+    assert 'class="meter low"' in chat._confidence_meter(0.3)
+    html = chat.render([("handoff", "sent back", "skeptic>scout")])
+    assert 'class="handoff' in html and "orb skeptic" in html and "orb scout" in html
+    values = {
+        "status": "diagnosed",
+        "diagnosis": {"candidates": [{"service": "cartservice", "fault_type": "cpu", "confidence": 0.9}]},
+        "action": {"action": "scale_service", "target_service": "cartservice", "runbook_id": "rb-cpu-saturation"},
+        "approval": {"approved": True, "note": "", "auto": False},
+        "guardrail_events": [{}, {}],
+        "tool_calls_used": 3,
+    }
+    who, card = chat.summary_card(values, 12.34, "agent time, live")
+    assert who == "summary"
+    assert "cartservice</b> · cpu fault" in card and "approved by you" in card and "12.3 s" in card
+    assert ">2<" in card  # guardrails fired
+
+
+def test_team_reactions():
+
+    assert orbs.team_moods("happy", "doubt") == ("puzzled", "doubt")  # Scout looks at Skeptic
+    assert orbs.team_moods("talk", "happy") == ("happy", "happy")  # team win
+    assert orbs.team_moods("happy", "") == ("happy", "suspicious")  # Skeptic eyes the new diagnosis
+    assert orbs.team_moods("think", "") == ("think", "")

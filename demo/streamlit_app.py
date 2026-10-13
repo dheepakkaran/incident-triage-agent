@@ -69,6 +69,7 @@ from triage.config import get_settings  # noqa: E402
 from triage.llm.providers import LLMError  # noqa: E402
 from triage.tools.db import case_alert  # noqa: E402
 
+LIGHT = getattr(getattr(st.context, "theme", None), "type", "dark") == "light"
 ss = st.session_state
 ss.setdefault("live_runs", 0)
 ss.setdefault("actions", [])
@@ -88,15 +89,20 @@ def run_graph(payload, chat_box) -> None:
     try:
         for node, delta, values, pending in core.drive(ss.graph, ss.run_id, payload):
             ss.run_values, ss.pending = values, pending
-            for message in chat.messages_for(node, delta, values) if node else []:
+            messages = chat.messages_for(node, delta, values) if node else []
+            if node == "report":
+                mode = "agent time, live" if ss.live else "agent time, replayed 4x faster than the recorded run"
+                agent_s = sum(step.get("seconds", 0) for step in values.get("steps") or [])  # excludes your thinking time
+                messages.append(chat.summary_card(values, agent_s, mode))
+            for message in messages:
                 ss.transcript.append(message)
-                chat_box.markdown(chat.render(ss.transcript), unsafe_allow_html=True)
+                chat_box.markdown(chat.render(ss.transcript, light=LIGHT), unsafe_allow_html=True)
                 if not ss.live:
                     time.sleep(REPLAY_PACE_S)
             # While the next step runs, the agent that owns it is "typing".
             typing = None if pending else core.next_agent(ss.graph, ss.run_id)
             if typing:  # stays up while that agent's next step runs (the real or replayed model call)
-                chat_box.markdown(chat.render(ss.transcript, typing=typing), unsafe_allow_html=True)
+                chat_box.markdown(chat.render(ss.transcript, typing=typing, light=LIGHT), unsafe_allow_html=True)
     except LLMError as err:
         ss.message = f"The live model failed ({str(err)[:200]}). Free-tier quota may be used up; try Replay."
         return
@@ -249,10 +255,10 @@ with triage_tab:
 
     values = ss.run_values if ss.run_values.get("case_id") == case_id else {}
     if values and ss.transcript:
-        chat_box.markdown(chat.render(ss.transcript), unsafe_allow_html=True)
+        chat_box.markdown(chat.render(ss.transcript, light=LIGHT), unsafe_allow_html=True)
     else:
         alert_text = html.escape(case_alert(get_settings().db_path, case_id)["text"])
-        chat_box.markdown(chat.render([("alert", alert_text), ("system", "Press <b>Run</b> and the agents talk it through here.")]), unsafe_allow_html=True)
+        chat_box.markdown(chat.render([("alert", alert_text), ("system", "Press <b>Run</b> and the agents talk it through here.")], light=LIGHT), unsafe_allow_html=True)
 
     decision = ss.pop("decision", None)
     if decision is not None and values and ss.pending:
@@ -325,6 +331,6 @@ Cold start of this server (data download, embedding model, Chroma index): {BOOT[
 
 # ---- interactive header (drawn last so the faces match this run's latest reactions) ----
 moods = chat.last_moods(ss.transcript) if ss.run_values else {"scout": "", "skeptic": ""}
-dark = getattr(getattr(st.context, "theme", None), "type", "dark") != "light"
+scout_mood, skeptic_mood = orbs.team_moods(moods["scout"], moods["skeptic"])
 with header_box:
-    components.html(orbs.header_html(moods["scout"], moods["skeptic"], dark), height=160)
+    components.html(orbs.header_html(scout_mood, skeptic_mood, dark=not LIGHT), height=160)

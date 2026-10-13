@@ -32,9 +32,10 @@ ORB_CSS = """
 .pod.xl {width: 104px; height: 104px; margin: 0; border-width: 3px;}
 .pod.scout {--ring: #3f8cff66; background: radial-gradient(circle at 50% 40%, #1d3f8a55, #0b183a33 70%);}
 .pod.skeptic {--ring: #ff5c8a66; background: radial-gradient(circle at 50% 40%, #7a1d4855, #2a0a1a33 70%);}
-.pod.think, .pod.read, .pod.suspicious {animation: pod-pulse 1.4s ease-in-out infinite;}
+.pod.think, .pod.read, .pod.suspicious, .pod.puzzled {animation: pod-pulse 1.4s ease-in-out infinite;}
 .pod.scout.think, .pod.scout.read {--ring: #4aa3ff;} .pod.skeptic.think, .pod.skeptic.read, .pod.skeptic.suspicious {--ring: #ff7aa0;}
 .pod.talk {--ring: #ffffffcc;}
+.pod.puzzled {--ring: #f5c04a;}
 .pod.happy {--ring: #2fd18a; box-shadow: 0 0 12px #2fd18a66;}
 .pod.doubt {--ring: #ff3b5c; box-shadow: 0 0 12px #ff3b5c77;}
 @keyframes pod-pulse {0%, 100% {box-shadow: 0 0 0 0 transparent;} 50% {box-shadow: 0 0 0 4px #ffffff14, 0 0 10px var(--ring);}}
@@ -80,6 +81,9 @@ ORB_CSS = """
 .orb.doubt {border-radius: 22%; animation: bot-shake .45s ease 2;}
 .orb.doubt .eye {height: 13%; top: 44%; animation: none;}
 .orb.doubt .eye.l {transform: rotate(16deg);} .orb.doubt .eye.r {transform: rotate(-16deg);}
+.orb.puzzled .eye.r {height: 34%; top: 29%;}
+.orb.scout.puzzled .eyes {transform: translateX(16%);}   /* Skeptic sits to Scout's right */
+.orb.skeptic.puzzled .eyes {transform: translateX(-16%);} /* Scout sits to Skeptic's left */
 .orb.surprised .eye, .orb.alert .eye {height: 32%; width: 22%; top: 30%; border-radius: 50%;}
 
 /* emote badge: pops above the head for a moment (::after) */
@@ -88,13 +92,13 @@ ORB_CSS = """
              display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px #0006;
              content: ""; opacity: 0; transform: scale(.4); transition: opacity .3s, transform .3s;}
 .orb.think::after {content: "…";}
-.orb.suspicious::after {content: "?";}
+.orb.suspicious::after, .orb.puzzled::after {content: "?";}
 .orb.doubt::after, .orb.surprised::after {content: "!"; background: #ff3b5c; color: #fff;}
 .orb.skeptic.happy::after {content: "✓"; background: #2fd18a; color: #fff;}
 .orb.scout.happy::after {content: "✦"; background: #ffd25a;}
 /* "badge": shown (each agent's latest message, the header). "pop": shown with a bounce, once (newest message). */
 .orb.badge.think::after, .orb.badge.suspicious::after, .orb.badge.doubt::after, .orb.badge.surprised::after,
-.orb.badge.happy::after, .orb.surprised::after {opacity: 1; transform: scale(1);}
+.orb.badge.happy::after, .orb.badge.puzzled::after, .orb.surprised::after {opacity: 1; transform: scale(1);}
 .orb.pop.badge::after {animation: bot-badge .5s ease;}
 /* cheek glow when happy (::before) */
 .orb::before {content: ""; position: absolute; left: 14%; right: 14%; top: 60%; height: 14%; opacity: 0;
@@ -119,6 +123,22 @@ ORB_CSS = """
   .pod, .orb, .orb * {animation: none !important; transition: none !important;}
 }
 """
+
+
+def team_moods(scout: str, skeptic: str) -> tuple[str, str]:
+    """The two bots react to each other in the header.
+
+    Skeptic disagrees  -> Scout turns to look at Skeptic, puzzled ("?").
+    Skeptic agrees     -> both are happy: a team win.
+    Scout has a diagnosis Skeptic has not reviewed yet -> Skeptic eyes it, suspicious.
+    """
+    if skeptic == "doubt":
+        return "puzzled", "doubt"
+    if skeptic == "happy":
+        return "happy", "happy"
+    if scout == "happy" and not skeptic:
+        return "happy", "suspicious"
+    return scout, skeptic
 
 
 def orb_html(agent: str, mood: str = "", size: str = "") -> str:
@@ -159,8 +179,10 @@ html, body {{margin: 0; background: transparent; font-family: "Source Sans Pro",
        transition: all .2s; pointer-events: none;}}
 .say.on {{opacity: 1; transform: translateX(-20%) scale(1);}}
 .orb.jump {{animation: bot-hop .5s ease 1 !important;}}
+body.light .pod.scout {{background: radial-gradient(circle at 50% 40%, #dbe8ff, #f3f7ff 70%);}}
+body.light .pod.skeptic {{background: radial-gradient(circle at 50% 40%, #ffdbe6, #fff4f7 70%);}}
 @media (max-width: 640px) {{.row {{flex-direction: column;}}}}
-</style></head><body><div class="row">{bots}</div>
+</style></head><body class="{"dark" if dark else "light"}"><div class="row">{bots}</div>
 <script>
 const LINES = {json.dumps(LINES)};
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -168,6 +190,7 @@ const orbs = [...document.querySelectorAll(".orb")];
 
 function look(x, y) {{  // turn every pair of eyes toward (x, y), in this frame coordinates
   for (const o of orbs) {{
+    if (o.classList.contains("puzzled")) continue;  // it is looking at its teammate
     const r = o.getBoundingClientRect(), dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
     const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 160);
     o.querySelector(".eyes").style.transform = `translate(${{dx / d * k * 12}}%, ${{dy / d * k * 10}}%)`;
@@ -186,6 +209,7 @@ for (const bot of document.querySelectorAll(".bot")) {{
   const o = bot.querySelector(".orb"), say = bot.querySelector(".say"), agent = bot.dataset.agent;
   let i = 0, timer;
   const pod = o.closest(".pod");
+  o.addEventListener("animationend", e => {{ if (e.animationName === "bot-hop") o.classList.remove("jump"); }});
   bot.addEventListener("mouseenter", () => {{ o.classList.add("surprised"); pod.classList.add("talk"); }});
   bot.addEventListener("mouseleave", () => {{ o.classList.remove("surprised"); pod.classList.remove("talk"); }});
   bot.addEventListener("click", () => {{
