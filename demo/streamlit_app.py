@@ -249,6 +249,23 @@ def show_reviewer(values: dict) -> None:
         st.caption("Outcome: Skeptic still said 'revise' after one revision round, so the case was escalated with both views.")
 
 
+def show_model_calls(values: dict) -> None:
+    """Which provider answered each agent's calls, so a fallback (say Gemma to Groq) is visible."""
+    rows: dict[tuple, dict] = {}
+    for call in values.get("llm_calls") or []:
+        agent = "Skeptic" if call.get("purpose", "").startswith("review") else "Scout"
+        row = rows.setdefault((agent, call["provider"], call["model"]), {
+            "agent": agent, "model": f"{call['provider']}:{call['model']}", "calls": 0, "tokens in/out": [0, 0], "time (s)": 0.0})
+        row["calls"] += 1
+        row["tokens in/out"][0] += call.get("input_tokens", 0)
+        row["tokens in/out"][1] += call.get("output_tokens", 0)
+        row["time (s)"] = round(row["time (s)"] + call.get("latency_s", 0.0), 1)
+    if not rows:
+        st.caption("No model calls yet.")
+        return
+    st.table([{**r, "tokens in/out": "{} / {}".format(*r["tokens in/out"]), "time (s)": f"{r['time (s)']:.1f}"} for r in rows.values()])
+
+
 def show_report(values: dict) -> None:
     path = ((values.get("report") or {}).get("paths") or {}).get("dir")
     if path and Path(path, "report.md").exists():
@@ -342,6 +359,8 @@ with hood_tab:
             show_diagnosis(hood_values)
             orb_heading("skeptic", "Skeptic's review")
             show_reviewer(hood_values)
+            st.subheader("Model calls")
+            show_model_calls(hood_values)
 
 with results_tab:
     st.markdown(RESULTS_MD.split("## Adversarial")[0] if RESULTS_MD else "No results file.")
