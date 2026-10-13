@@ -121,16 +121,21 @@ def search(query: str, k: int = 3) -> list[dict]:
     return hits
 
 
-def search_runbooks(ctx, args: SearchRunbooksArgs) -> str:
-    """Tool entry point: render the hits as short text lines the model can quote."""
-    lines = [f"runbooks matching: {args.query}"]
-    for hit in search(args.query, args.k):
+def render_hits(query: str, hits: list[dict]) -> str:
+    """Short text lines the model can quote."""
+    lines = [f"runbooks matching: {query}"]
+    for hit in hits:
         lines.append(
             f"- {hit['id']} | {hit['title']} | fault_type={hit['fault_type']} | "
             f"allowed_actions={','.join(hit['allowed_actions'])} | score={hit['score']}"
         )
         lines.append(f"  {hit['snippet']}")
     return "\n".join(lines)
+
+
+def search_runbooks(ctx, args: SearchRunbooksArgs) -> str:
+    """Tool entry point."""
+    return render_hits(args.query, search(args.query, args.k))
 
 
 # Symptom phrases written in different words from both the alerts and the runbooks.

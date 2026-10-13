@@ -77,9 +77,9 @@ def _pct(value: float) -> str:
 
 def _line(row: dict) -> str:
     b, a = row["before"], row["after"]
-    label = f"inside {row['caller']} (server spans)" if row["kind"] == "server" else f"{row['caller']} -> {row['callee']}"
+    edge_name = f"inside {row['caller']} (server spans)" if row["kind"] == "server" else f"{row['caller']} -> {row['callee']}"
     return (
-        f"{label}: n {b['n']} -> {a['n']}, errors {_pct(b['err'])} -> {_pct(a['err'])}, "
+        f"{edge_name}: n {b['n']} -> {a['n']}, errors {_pct(b['err'])} -> {_pct(a['err'])}, "
         f"p50 {fmt(b['p50'])} -> {fmt(a['p50'])} ms, p95 {fmt(b['p95'])} -> {fmt(a['p95'])} ms"
     )
 
