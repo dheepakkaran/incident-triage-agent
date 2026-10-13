@@ -94,6 +94,7 @@ def start(case_id: str, mode: str) -> None:
     if live:
         ss.live_runs += 1
     ss.graph, state, description = core.start_run(case_id, "live" if live else "replay", REPLAYS[case_id])
+    ss.reviewer_on = REPLAYS[case_id]["config"]["reviewer_enabled"] if not live else settings.reviewer_enabled
     ss.run_id = state["run_id"]
     ss.message = ss.message or description + (f" ({ss.live_runs}/{core.LIVE_PER_SESSION} live runs used)" if live else "")
     run_graph(state, "Investigating...")
@@ -107,12 +108,27 @@ def decide(approved: bool, note: str) -> None:
 # ---- rendering -----------------------------------------------------------
 
 
+ACTOR = {
+    "validate_alert": "🛡️ guardrail",
+    "investigate": "🔎 investigator",
+    "run_tools": "🔎 investigator · tools",
+    "diagnose": "🔎 investigator",
+    "review": "🧐 reviewer",
+    "review_tools": "🧐 reviewer · tools",
+    "propose_action": "🛠️ action",
+    "approval_gate": "🙋 human gate",
+    "escalate": "📣 escalate",
+    "report": "📄 report",
+}
+
+
 def show_timeline(values: dict) -> None:
     results = values.get("tool_results") or {}
     for step in values.get("steps") or []:
         extra = {k: v for k, v in step.items() if k not in ("node", "seconds", "calls", "tool_calls")}
         detail = ", ".join(f"{k}={v}" for k, v in extra.items())
-        st.markdown(f"**`{step['node']}`** · {step.get('seconds', 0)}s {('· ' + detail) if detail else ''}")
+        actor = ACTOR.get(step["node"], "")
+        st.markdown(f"{actor} **`{step['node']}`** · {step.get('seconds', 0)}s {('· ' + detail) if detail else ''}")
         for call in step.get("calls") or []:
             if "id" in call:
                 output = results.get(call["id"], {}).get("data", "")
@@ -134,8 +150,41 @@ def show_diagnosis(values: dict) -> None:
     for e in d["evidence"]:
         st.markdown(f"- **[{e['tool_call_id']}]** `{e['quote']}` — {e['why_it_matters']}")
     st.markdown(d["summary"])
-    for r in values.get("reviews") or []:
-        st.markdown(f"Reviewer: **{r['verdict']}** — {r['reason']}")
+
+
+def show_reviewer(values: dict) -> None:
+    """The second agent: its verdict each round, its evidence, its own tool calls, and what happened next."""
+    if not values:
+        st.caption("Runs after the diagnosis.")
+        return
+    if not ss.get("reviewer_on", True):
+        st.caption("The reviewer was switched off for this run (REVIEWER_ENABLED=false).")
+        return
+    reviews = values.get("reviews") or []
+    if not reviews:
+        reason = values.get("escalation_reason")
+        st.caption(f"The reviewer did not run: the case escalated before review ({reason})." if reason else "Waiting for the diagnosis...")
+        return
+    results = values.get("tool_results") or {}
+    rounds = [s for s in values.get("steps") or [] if s["node"] in ("review", "review_tools")]
+    review_calls = [c for s in rounds if s["node"] == "review_tools" for c in s.get("calls") or [] if "id" in c]
+    for i, r in enumerate(reviews, start=1):
+        badge = "✅ AGREE" if r["verdict"] == "agree" else "↩️ REVISE"
+        suspect = f" · suspects **{r['suspected_service']}**" if r["verdict"] == "revise" and r.get("suspected_service") else ""
+        st.markdown(f"**Round {i}: {badge}**{suspect}")
+        st.markdown(f"> {r['reason']}")
+        for e in r.get("evidence") or []:
+            st.markdown(f"- [{e['tool_call_id']}] `{e['quote']}`")
+    for c in review_calls:
+        with st.expander(f"reviewer checked [{c['id']}] {c['tool']}({c['args']})"):
+            st.code(results.get(c["id"], {}).get("data", "")[:1500], language=None)
+    last = reviews[-1]["verdict"]
+    if last == "agree":
+        st.caption("Outcome: the reviewer agreed, so the diagnosis went on to the action step.")
+    elif len(reviews) == 1:
+        st.caption("Outcome: sent back to the investigator once with the reviewer's reason.")
+    else:
+        st.caption("Outcome: still 'revise' after one revision round, so the case was escalated with both views.")
 
 
 def show_report(values: dict) -> None:
@@ -174,6 +223,8 @@ with triage_tab:
     with side_col:
         st.subheader("Diagnosis")
         show_diagnosis(values)
+        st.subheader("Reviewer agent")
+        show_reviewer(values)
         st.subheader("Approval")
         pending = ss.pending if values else None
         if pending:
