@@ -114,7 +114,7 @@ def search(query: str, k: int = 3) -> list[dict]:
                 "title": meta["title"],
                 "fault_type": meta["fault_type"],
                 "allowed_actions": meta["allowed_actions"].split(","),
-                "snippet": doc[:220],
+                "snippet": " ".join(doc.split())[:200],
                 "score": round(1 - dist, 3),
             }
         )
