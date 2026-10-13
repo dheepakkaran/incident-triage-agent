@@ -22,4 +22,5 @@ venv/
 .claude/
 
 # Space build output
-/space/dist/
+/demo/dist/
+/demo/data/
