@@ -13,8 +13,8 @@ States (wait -> work -> respond) and expressions, set by a mood class:
   doubt      eyes slant inward, body sharpens, a shake (the reviewer disagrees)
   surprised  eyes grow and go round (hover)
 
-`header_html` is the interactive strip at the top (its own iframe, so it may run JavaScript):
-eyes follow the mouse, hovering surprises them, clicking makes a bot react and say a line.
+`boxes_html` draws the two bots at the top, facing the user, each saying where things stand;
+`bot_script` makes their eyes follow the mouse and lets you click them for a quick line.
 All motion stops for users who ask for reduced motion.
 """
 
@@ -84,6 +84,7 @@ ORB_CSS = """
 .orb.puzzled .eye.r {height: 34%; top: 29%;}
 .orb.scout.puzzled .eyes {transform: translateX(16%);}   /* Skeptic sits to Scout's right */
 .orb.skeptic.puzzled .eyes {transform: translateX(-16%);} /* Scout sits to Skeptic's left */
+.orb.jump {animation: bot-hop .5s ease 1 !important;}
 .orb.surprised .eye, .orb.alert .eye {height: 32%; width: 22%; top: 30%; border-radius: 50%;}
 
 /* emote badge: pops above the head for a moment (::after) */
@@ -152,72 +153,81 @@ LINES = {
 }
 
 
-def header_html(scout_mood: str, skeptic_mood: str, dark: bool) -> str:
-    """Interactive 'meet the agents' strip. Rendered with st.components.v1.html (an iframe)."""
-    text, muted, card = ("#e6e9ef", "#9aa4b2", "#ffffff10") if dark else ("#1d2330", "#5b6577", "#0000000a")
-    bots = ""
-    for agent, name, role, blurb, mood in (
-        ("scout", "Scout", "investigator", "Calls the 5 read-only tools, follows the call graph, writes the diagnosis with quoted evidence.", scout_mood),
-        ("skeptic", "Skeptic", "reviewer", "Tries to prove Scout wrong: is the blamed service the cause, or a victim of a dependency?", skeptic_mood),
-    ):
-        bots += f"""
-        <div class="bot" data-agent="{agent}">
-          <div class="face">{orb_html(agent, mood + " badge pop", "xl")}<div class="say"></div></div>
-          <div class="txt"><b>{name}</b> · {role}<br><small>{blurb}</small><br><span class="hint">click me</span></div>
-        </div>"""
-    return f"""<!doctype html><html><head><meta charset="utf-8"><style>
-{ORB_CSS}
-html, body {{margin: 0; background: transparent; font-family: "Source Sans Pro", system-ui, sans-serif; color: {text};}}
-.row {{display: flex; gap: 14px; padding: 30px 2px 4px;}}
-.bot {{flex: 1; display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-radius: 16px;
-       background: {card}; border: 1px solid #8884; cursor: pointer; user-select: none;}}
-.face {{position: relative;}}
-.txt small {{color: {muted};}}
-.hint {{font-size: 11px; color: {muted}; opacity: .7;}}
-.say {{position: absolute; left: 50%; bottom: 110%; transform: translateX(-20%) scale(.6); opacity: 0; white-space: nowrap;
-       background: {text}; color: {"#0e1117" if dark else "#fff"}; font-size: 12px; padding: 4px 9px; border-radius: 10px;
-       transition: all .2s; pointer-events: none;}}
-.say.on {{opacity: 1; transform: translateX(-20%) scale(1);}}
-.orb.jump {{animation: bot-hop .5s ease 1 !important;}}
-body.light .pod.scout {{background: radial-gradient(circle at 50% 40%, #dbe8ff, #f3f7ff 70%);}}
-body.light .pod.skeptic {{background: radial-gradient(circle at 50% 40%, #ffdbe6, #fff4f7 70%);}}
-@media (max-width: 640px) {{.row {{flex-direction: column;}}}}
-</style></head><body class="{"dark" if dark else "light"}"><div class="row">{bots}</div>
-<script>
-const LINES = {json.dumps(LINES)};
-const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const orbs = [...document.querySelectorAll(".orb")];
+BOX_CSS = """
+.botboxes {display: flex; gap: 14px; margin: 6px 0 4px;}
+.botbox {flex: 1; display: flex; gap: 16px; align-items: center; padding: 16px 18px; border-radius: 18px;
+         border: 1px solid #8884; background: linear-gradient(160deg, #ffffff0c, #ffffff03); cursor: pointer;
+         user-select: none; transition: border-color .4s, box-shadow .4s;}
+.botbox.scout.active {border-color: #3f8cff99; box-shadow: 0 0 0 1px #3f8cff33, 0 8px 28px #1f6bff22;}
+.botbox.skeptic.active {border-color: #ff5c8a99; box-shadow: 0 0 0 1px #ff5c8a33, 0 8px 28px #ff4f8b22;}
+.botbox .pod {margin: 0;}
+.botbox .body {flex: 1; min-width: 0;}
+.botbox .name {font-weight: 700;} .botbox .role {opacity: .65; font-weight: 400;}
+.botbox .say {position: relative; margin: 8px 0 6px; padding: 9px 12px; border-radius: 4px 14px 14px 14px;
+              background: #ffffff10; border: 1px solid #8883; line-height: 1.4; min-height: 2.8em;}
+.botbox.scout .say {background: #1f6bff1c; border-color: #3fc6ff44;}
+.botbox.skeptic .say {background: #ff4f8b17; border-color: #ff4f8b44;}
+.botbox .say.fresh {animation: say-in .35s ease-out;}
+.botbox .line {font-size: .8rem; opacity: .75;}
+.botbox:hover .orb .eye {height: 32%; width: 22%; top: 30%; border-radius: 50%;}
+.botbox.light {background: #fff;}
+.botbox.light.scout .say {background: #eaf2ff; border-color: #b9d3ff;}
+.botbox.light.skeptic .say {background: #fff0f4; border-color: #ffc4d3;}
+.botbox.light .pod.scout {background: radial-gradient(circle at 50% 40%, #dbe8ff, #f3f7ff 70%);}
+.botbox.light .pod.skeptic {background: radial-gradient(circle at 50% 40%, #ffdbe6, #fff4f7 70%);}
+@keyframes say-in {from {opacity: 0; transform: translateY(4px);} to {opacity: 1; transform: none;}}
+@media (max-width: 720px) {.botboxes {flex-direction: column;}}
+@media (prefers-reduced-motion: reduce) {.botbox .say.fresh {animation: none;}}
+"""
 
-function look(x, y) {{  // turn every pair of eyes toward (x, y), in this frame coordinates
-  for (const o of orbs) {{
-    if (o.classList.contains("puzzled")) continue;  // it is looking at its teammate
-    const r = o.getBoundingClientRect(), dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
-    const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 160);
-    o.querySelector(".eyes").style.transform = `translate(${{dx / d * k * 12}}%, ${{dy / d * k * 10}}%)`;
-  }}
-}}
-document.addEventListener("mousemove", e => look(e.clientX, e.clientY));
-try {{  // also follow the mouse over the rest of the page (same-origin frame)
-  const frame = window.frameElement;
-  window.parent.document.addEventListener("mousemove", e => {{
-    const r = frame.getBoundingClientRect();
-    look(e.clientX - r.left, e.clientY - r.top);
-  }});
-}} catch (err) {{}}
 
-for (const bot of document.querySelectorAll(".bot")) {{
-  const o = bot.querySelector(".orb"), say = bot.querySelector(".say"), agent = bot.dataset.agent;
-  let i = 0, timer;
-  const pod = o.closest(".pod");
-  o.addEventListener("animationend", e => {{ if (e.animationName === "bot-hop") o.classList.remove("jump"); }});
-  bot.addEventListener("mouseenter", () => {{ o.classList.add("surprised"); pod.classList.add("talk"); }});
-  bot.addEventListener("mouseleave", () => {{ o.classList.remove("surprised"); pod.classList.remove("talk"); }});
-  bot.addEventListener("click", () => {{
-    o.classList.remove("pop"); void o.offsetWidth; o.classList.add("pop");
-    say.textContent = LINES[agent][i++ % LINES[agent].length];
-    say.classList.add("on");
-    if (!reduce) {{ o.classList.remove("jump"); void o.offsetWidth; o.classList.add("jump"); }}
-    clearTimeout(timer); timer = setTimeout(() => say.classList.remove("on"), 1800);
-  }});
-}}
-</script></body></html>"""
+def boxes_html(status: dict, active: str | None, light: bool, fresh: set[str]) -> str:
+    """The two bots, facing the user, each with what it is telling the user right now.
+
+    `status` comes from chat.bot_status; `active` is the bot working right now; `fresh`
+    names the bots whose speech just changed (they get a small entrance animation).
+    """
+    import html
+
+    cards = []
+    for agent, name, role in (("scout", "Scout", "investigator"), ("skeptic", "Skeptic", "reviewer")):
+        st = status[agent]
+        classes = f"botbox {agent}{' active' if active == agent else ''}{' light' if light else ''}"
+        cards.append(
+            f'<div class="{classes}" data-agent="{agent}">{orb_html(agent, st["mood"] + " badge", "xl")}'
+            f'<div class="body"><div><span class="name">{name}</span> <span class="role">· {role}</span></div>'
+            f'<div class="say{" fresh" if agent in fresh else ""}">{html.escape(st["say"])}</div>'
+            f'<div class="line">{html.escape(st["line"])}</div></div></div>'
+        )
+    return '<div class="botboxes">' + "".join(cards) + "</div>"
+
+
+def bot_script() -> str:
+    """Our own static script (no app data inside): eyes follow the mouse, clicking a bot makes it
+    hop and say a quick line. Wired once per page; it finds the boxes again after every update."""
+    return """<script>
+if (!window.__triageBots) {
+  window.__triageBots = true;
+  const LINES = __LINES__;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const doc = window.parent && window.parent.document ? window.parent.document : document;
+  doc.addEventListener("mousemove", e => {
+    for (const o of doc.querySelectorAll(".botbox .orb")) {
+      if (o.classList.contains("puzzled")) continue;  // it is looking at its teammate
+      const r = o.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 220);
+      o.querySelector(".eyes").style.transform = `translate(${dx / d * k * 12}%, ${dy / d * k * 10}%)`;
+    }
+  });
+  const count = {scout: 0, skeptic: 0};
+  doc.addEventListener("click", e => {
+    const box = e.target.closest && e.target.closest(".botbox");
+    if (!box) return;
+    const agent = box.dataset.agent, o = box.querySelector(".orb"), say = box.querySelector(".say");
+    const before = say.textContent;
+    say.textContent = LINES[agent][count[agent]++ % LINES[agent].length];
+    if (!reduce) { o.classList.remove("jump"); void o.offsetWidth; o.classList.add("jump"); }
+    setTimeout(() => { if (say.isConnected) say.textContent = before; o.classList.remove("jump"); }, 1800);
+  });
+}
+</script>""".replace("__LINES__", json.dumps(LINES))

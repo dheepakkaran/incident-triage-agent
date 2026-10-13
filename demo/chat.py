@@ -6,6 +6,7 @@ The technical detail (raw tool output, every step) stays in the "Under the hood"
 """
 
 import html
+import re
 
 from orbs import orb_html
 
@@ -289,3 +290,90 @@ CHAT_CSS = """
 @media (prefers-reduced-motion: reduce) {.new, .typing .dots i, .handoff .flow, .new .meter .fill {animation: none;}}
 </style>
 """
+
+
+# ---- what each bot says to YOU in its box, live -----------------------------
+
+
+def _plain(markup: str, limit: int = 150) -> str:
+    """Bubble HTML -> one short plain sentence for the bot's speech."""
+    text = re.sub(r"</?(b|i|code|small)>", "", markup)  # inline tags: no gap
+    text = html.unescape(re.sub(r"<[^>]+>", " ", text))  # block tags: a space
+    text = re.sub(r"\s+([.,!?:])", r"\1", re.sub(r"\s+", " ", text)).strip()
+    return text if len(text) <= limit else text[: limit - 1].rsplit(" ", 1)[0] + "…"
+
+
+def _latest(transcript: list, who: str) -> tuple[str, str] | None:
+    for entry in reversed(transcript):
+        if entry[0] == who:
+            return entry[1], (entry[2] if len(entry) > 2 else "")
+    return None
+
+
+def bot_status(values: dict, transcript: list, typing: str | None, pending: dict | None, reviewer_on: bool) -> dict:
+    """{'scout': {mood, say, line}, 'skeptic': {...}}: each bot talks to the user about where things stand."""
+    status = values.get("status")
+    finished = bool(values.get("report"))
+    d = values.get("diagnosis") or {}
+    top = (d.get("candidates") or [{}])[0]
+    reviews = values.get("reviews") or []
+    scout_checks = sum(len(s.get("calls") or []) for s in values.get("steps") or [] if s["node"] == "run_tools")
+    skeptic_checks = sum(len(s.get("calls") or []) for s in values.get("steps") or [] if s["node"] == "review_tools")
+
+    # Scout
+    last = _latest(transcript, "scout")
+    if not values:
+        scout = ("", "Hi! Pick a test case and press Run. I'll dig through the metrics, logs and traces to find what broke.")
+    elif status == "rejected":
+        scout = ("doubt", "That alert doesn't look valid, so I stopped before investigating.")
+    elif pending:
+        scout = ("talk", f"My suggestion: {pending['action']}({pending['target_service']}). It's risky, so it's your call: approve or reject below 👇")
+    elif finished and status == "diagnosed":
+        action = values.get("action") or {}
+        did = f"{action.get('action')}({action.get('target_service')}) was simulated, nothing really ran" if action else "no action was needed"
+        scout = ("happy", f"Done! It was {top.get('service')} ({top.get('fault_type')}). {did}. The full report is below.")
+    elif finished:
+        reason = _plain(values.get("escalation_reason") or "", 90)
+        scout = ("read", f"This one needs a human: {reason}. Everything I found is in the report below.")
+    elif typing == "scout" and last and last[1] == "read":
+        scout = ("think", "Got it. Checking the next thing…")
+    elif last and last[1] == "happy" and top:
+        scout = ("happy", f"I think it's {top['service']}: a {top['fault_type']} problem. I'm {top['confidence'] * 100:.0f}% sure.")
+    elif last and last[1] == "read":
+        results = values.get("tool_results") or {}
+        latest_tool = list(results.values())[-1]["tool"] if results else ""
+        thing = {"list_services": "service map", "get_metric_changes": "metrics", "query_logs": "logs",
+                 "get_trace_stats": "traces", "search_runbooks": "runbooks"}.get(latest_tool, "results")
+        scout = ("read", f"Got the {thing} back. Reading them now…")
+    elif last:
+        verb = {"think": "I'm on it: ", "talk": "Here's what I see: "}.get(last[1], "")
+        scout = (last[1] or "think", verb + _plain(last[0], 120))
+    else:
+        scout = ("think", "Looking at the alert…")
+    scout_line = f"🔎 {scout_checks} checks · 🎯 {top.get('service', '—') if top else '—'}"
+
+    # Skeptic
+    last = _latest(transcript, "skeptic")
+    if not values:
+        skeptic = ("", "And I'll double-check Scout's work: is the blamed service really the cause, or just a victim?")
+    elif not reviewer_on:
+        skeptic = ("", "I'm switched off for this run, so Scout's diagnosis goes straight to the action step.")
+    elif finished and status == "escalated" and len(reviews) >= 1 and reviews[-1]["verdict"] == "revise":
+        skeptic = ("doubt", f"We still disagree: I think it's {reviews[-1]['suspected_service']}. A human should decide.")
+    elif last and last[1] == "doubt" and reviews:
+        skeptic = ("doubt", f"I don't buy it. I think it's {reviews[-1]['suspected_service']}: {_plain(reviews[-1]['reason'], 90)}")
+    elif last and last[1] == "happy":
+        skeptic = ("happy", f"I agree with Scout ✅ {_plain(reviews[-1]['reason'], 100) if reviews else ''}")
+    elif typing == "skeptic" or (last and last[1] in ("suspicious", "read")):
+        skeptic = ("suspicious", "Let me double-check that myself…")
+    elif d:
+        skeptic = ("suspicious", "Scout has a diagnosis. Let me review it…")
+    else:
+        skeptic = ("read", "Watching Scout work… I'll review the diagnosis when it's ready.")
+    verdicts = " → ".join(r["verdict"] for r in reviews) or "no verdict yet"
+    skeptic_line = f"🧐 {verdicts} · {skeptic_checks} checks"
+
+    return {
+        "scout": {"mood": scout[0], "say": scout[1], "line": scout_line},
+        "skeptic": {"mood": skeptic[0], "say": skeptic[1], "line": skeptic_line},
+    }

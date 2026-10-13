@@ -191,7 +191,9 @@ def drive(graph, run_id: str, payload):
     from triage.agent.graph import thread_config
 
     config = thread_config(run_id)
-    for update in graph.stream(payload, config, stream_mode="updates"):
+    # durability="sync": each step's checkpoint is saved before it is reported, so get_state()
+    # below is never one step behind (the default saves asynchronously).
+    for update in graph.stream(payload, config, stream_mode="updates", durability="sync"):
         pending = update["__interrupt__"][0].value if "__interrupt__" in update else None
         node = next((k for k in update if k != "__interrupt__"), None)
         yield node, (update.get(node) or {}) if node else {}, graph.get_state(config).values, pending

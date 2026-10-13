@@ -23,7 +23,6 @@ import orbs  # noqa: E402
 THREADS = core.configure_environment()
 
 import streamlit as st  # noqa: E402
-import streamlit.components.v1 as components  # noqa: E402
 
 # Secrets stay on the server: copy the key into the process environment, never into the page.
 try:
@@ -35,7 +34,7 @@ except FileNotFoundError:  # no secrets file when running locally without one
 st.set_page_config(page_title="Incident triage agent", page_icon="🚨", layout="wide")
 
 # The agents' faces (eyes, moods, reactions) live in demo/orbs.py.
-ORB_CSS = "<style>" + orbs.ORB_CSS + """
+ORB_CSS = "<style>" + orbs.ORB_CSS + orbs.BOX_CSS + """
 .orb-h {display: flex; align-items: center; font-size: 1.35rem; font-weight: 600; margin: 1.2rem 0 .4rem;}
 </style>"""
 st.markdown(ORB_CSS, unsafe_allow_html=True)
@@ -78,13 +77,29 @@ ss.setdefault("pending", None)
 ss.setdefault("message", "")
 ss.setdefault("transcript", [])
 ss.setdefault("live", False)
+ss.setdefault("last_says", {})
 REPLAY_PACE_S = 0.6  # pause between messages in replay (model calls are paced separately, in core.py)
 
 
 # ---- running -------------------------------------------------------------
 
 
-def run_graph(payload, chat_box) -> None:
+def boxes(typing: str | None = None) -> str:
+    """The two bots at the top: what each is telling you right now, with the matching face."""
+    values = ss.run_values
+    status = chat.bot_status(values, ss.transcript, typing, ss.pending, ss.get("reviewer_on", True))
+    # Team reaction: when Skeptic spoke after Scout (and Scout is not working), Scout reacts to it.
+    order = {who: i for i, (who, *_rest) in enumerate(ss.transcript)}
+    if order.get("skeptic", -1) > order.get("scout", -1) and typing != "scout":
+        status["scout"]["mood"], status["skeptic"]["mood"] = orbs.team_moods(status["scout"]["mood"], status["skeptic"]["mood"])
+    fresh = {agent for agent in status if ss.last_says.get(agent) != status[agent]["say"]}
+    ss.last_says = {agent: status[agent]["say"] for agent in status}
+    running = bool(values) and not values.get("report") and not ss.pending
+    active = typing or (ss.transcript[-1][0] if running and ss.transcript and ss.transcript[-1][0] in ("scout", "skeptic") else None)
+    return orbs.boxes_html(status, active, LIGHT, fresh)
+
+
+def run_graph(payload, chat_box, boxes_box) -> None:
     """Stream the graph; each finished node adds its messages to the conversation as it happens."""
     try:
         for node, delta, values, pending in core.drive(ss.graph, ss.run_id, payload):
@@ -97,12 +112,14 @@ def run_graph(payload, chat_box) -> None:
             for message in messages:
                 ss.transcript.append(message)
                 chat_box.markdown(chat.render(ss.transcript, light=LIGHT), unsafe_allow_html=True)
+                boxes_box.markdown(boxes(), unsafe_allow_html=True)
                 if not ss.live:
                     time.sleep(REPLAY_PACE_S)
             # While the next step runs, the agent that owns it is "typing".
             typing = None if pending else core.next_agent(ss.graph, ss.run_id)
             if typing:  # stays up while that agent's next step runs (the real or replayed model call)
                 chat_box.markdown(chat.render(ss.transcript, typing=typing, light=LIGHT), unsafe_allow_html=True)
+                boxes_box.markdown(boxes(typing), unsafe_allow_html=True)
     except LLMError as err:
         ss.message = f"The live model failed ({str(err)[:200]}). Free-tier quota may be used up; try Replay."
         return
@@ -111,7 +128,7 @@ def run_graph(payload, chat_box) -> None:
         ss.actions.append(f"{time.strftime('%H:%M:%S')}  SIMULATED {action['action']}({action['target_service']})  [{ss.run_values['case_id']}]")
 
 
-def start(case_id: str, mode: str, chat_box) -> None:
+def start(case_id: str, mode: str, chat_box, boxes_box) -> None:
     settings = get_settings()
     live = mode == "Run live"
     if live and not settings.groq_api_key:
@@ -130,13 +147,15 @@ def start(case_id: str, mode: str, chat_box) -> None:
     ss.run_id = state["run_id"]
     ss.message = ss.message or description + (f" ({ss.live_runs}/{core.LIVE_PER_SESSION} live runs used)" if live else "")
     ss.transcript = [("alert", html.escape(state["alert"]["text"]))]
-    run_graph(state, chat_box)
+    ss.run_values, ss.pending = {"case_id": case_id}, None
+    run_graph(state, chat_box, boxes_box)
 
 
-def decide(approved: bool, note: str, chat_box) -> None:
+def decide(approved: bool, note: str, chat_box, boxes_box) -> None:
     said = "✅ Approve." if approved else "❌ Reject."
     ss.transcript.append(("human", said + (f" {html.escape(note)}" if note else "")))
-    run_graph(core.resume_payload(approved, note), chat_box)
+    ss.pending = None
+    run_graph(core.resume_payload(approved, note), chat_box, boxes_box)
 
 
 # ---- rendering -----------------------------------------------------------
@@ -234,23 +253,28 @@ def show_report(values: dict) -> None:
 
 st.title("🚨 Incident triage agent")
 st.caption("First-pass root-cause analysis with LangGraph, guardrails, a reviewer agent and a human approval gate. Nothing is ever executed.")
-header_box = st.empty()  # filled at the end of the script, so the faces match the latest messages
+st.html(orbs.bot_script(), unsafe_allow_javascript=True)  # our own static script: eyes + click reactions
+
+cases = sorted(REPLAYS)
+left, mid, right = st.columns([2, 2, 1], vertical_alignment="bottom")
+case_id = left.selectbox("Test case", cases)
+mode = mid.radio("Mode", ["Replay", "Run live"], horizontal=True)
+# Clicks are recorded once by callbacks and consumed here. A plain `if st.button(...)` can
+# fire again when a long replay is interrupted by another widget change.
+right.button("Run", type="primary", use_container_width=True, on_click=lambda: ss.update(run_request=True))
+caption = st.empty()
+if ss.run_values and ss.run_values.get("case_id") != case_id:  # a new case was picked: the bots start fresh
+    ss.run_values, ss.transcript, ss.pending = {}, [], None
+boxes_box = st.empty()
+
 triage_tab, hood_tab, results_tab, guard_tab, about_tab = st.tabs(
     ["💬 Triage", "🔧 Under the hood", "Results", "Guardrails", "About"]
 )
 
 with triage_tab:
-    cases = sorted(REPLAYS)
-    left, mid, right = st.columns([2, 2, 1])
-    case_id = left.selectbox("Test case", cases)
-    mode = mid.radio("Mode", ["Replay", "Run live"], horizontal=True)
-    # Clicks are recorded once by callbacks and consumed here. A plain `if st.button(...)` can
-    # fire again when a long replay is interrupted by another widget change.
-    right.button("Run", type="primary", use_container_width=True, on_click=lambda: ss.update(run_request=True))
-    caption = st.empty()
     chat_box = st.empty()
     if ss.pop("run_request", False):
-        start(case_id, mode, chat_box)
+        start(case_id, mode, chat_box, boxes_box)
     caption.caption(ss.message or "Replay runs the real agent graph on the model replies recorded in the eval. No API calls.")
 
     values = ss.run_values if ss.run_values.get("case_id") == case_id else {}
@@ -262,7 +286,7 @@ with triage_tab:
 
     decision = ss.pop("decision", None)
     if decision is not None and values and ss.pending:
-        decide(decision["approved"], decision["note"], chat_box)
+        decide(decision["approved"], decision["note"], chat_box, boxes_box)
         st.rerun()
 
     pending = ss.pending if values else None
@@ -329,8 +353,5 @@ Cold start of this server (data download, embedding model, Chroma index): {BOOT[
     )
 
 
-# ---- interactive header (drawn last so the faces match this run's latest reactions) ----
-moods = chat.last_moods(ss.transcript) if ss.run_values else {"scout": "", "skeptic": ""}
-scout_mood, skeptic_mood = orbs.team_moods(moods["scout"], moods["skeptic"])
-with header_box:
-    components.html(orbs.header_html(scout_mood, skeptic_mood, dark=not LIGHT), height=160)
+# ---- the two bots (drawn last, so they reflect everything above) ----
+boxes_box.markdown(boxes(), unsafe_allow_html=True)

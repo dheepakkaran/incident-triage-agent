@@ -105,3 +105,24 @@ def test_team_reactions():
     assert orbs.team_moods("talk", "happy") == ("happy", "happy")  # team win
     assert orbs.team_moods("happy", "") == ("happy", "suspicious")  # Skeptic eyes the new diagnosis
     assert orbs.team_moods("think", "") == ("think", "")
+
+
+def test_bots_tell_the_user_where_things_stand():
+    import chat
+
+    idle = chat.bot_status({}, [], None, None, True)
+    assert idle["scout"]["say"].startswith("Hi! Pick a test case")
+    values = {
+        "case_id": CASE,
+        "diagnosis": {"candidates": [{"service": "cartservice", "fault_type": "cpu", "confidence": 0.9}], "evidence": [], "summary": ""},
+        "reviews": [{"verdict": "agree", "reason": "fits the call graph", "suspected_service": None}],
+        "steps": [{"node": "run_tools", "calls": [{}]}],
+    }
+    transcript = [("alert", "x"), ("scout", "My diagnosis: <b>cartservice</b>.", "happy"), ("skeptic", "I agree.", "happy")]
+    now = chat.bot_status(values, transcript, None, None, True)
+    assert now["scout"]["say"] == "I think it's cartservice: a cpu problem. I'm 90% sure."
+    assert now["skeptic"]["say"].startswith("I agree with Scout ✅")
+    pending = {"action": "scale_service", "target_service": "cartservice"}
+    assert "your call" in chat.bot_status(values, transcript, None, pending, True)["scout"]["say"]
+    assert "switched off" in chat.bot_status(values, transcript, None, None, False)["skeptic"]["say"]
+    assert chat._plain("Looking at <b>frontend</b>.") == "Looking at frontend."
