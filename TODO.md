@@ -25,7 +25,7 @@ Left: publishing, hosted-model providers, and a hosted-model eval row.
       Groq, Google AI Studio (Gemma 4), Cerebras (30-day trial), Mistral; OpenRouter optional.
 - [ ] **Me:** add providers `cerebras`, `mistral` (OpenAI-compatible endpoints) and `google` (Gemma 4 via `langchain-google-genai`);
       default chain `groq,cerebras,google,mistral,ollama`; smoke-test tool calling on each (`python -m triage smoke llm`).
-- [ ] **Me:** lower the demo's daily live cap from 50 to ~12 (Groq free tier ≈ 11–14 cases/day with the reviewer on).
+- [x] **Me:** lower the demo's daily live cap from 50 to 12 (Groq free tier ≈ 11–14 cases/day with the reviewer on).
 - [ ] **Me:** add `DEMO_LIVE_PROVIDER` so live mode can use local Ollama when the demo runs on your laptop.
 - [ ] **Me:** test live mode end to end on Groq (approve and reject), and check the live flow/typing stays in sync.
 

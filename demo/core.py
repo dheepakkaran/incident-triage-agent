@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 DB_PATH = HERE / "data" / "telemetry.db"
 DB_REPO = os.getenv("DEMO_DB_REPO", "dheepakkaran/incident-triage-telemetry")  # a public HF *dataset*
 LIVE_PER_SESSION = int(os.getenv("LIVE_RUNS_PER_SESSION", "3"))
-LIVE_PER_DAY = int(os.getenv("LIVE_RUNS_PER_DAY", "50"))
+LIVE_PER_DAY = int(os.getenv("LIVE_RUNS_PER_DAY", "12"))  # Groq free tier ≈ 11-14 full cases a day
 # Replay plays each model call back at 4x its recorded speed (0.5 s to 2.5 s), so the
 # "typing" bubble lasts about as long, relatively, as the model really thought.
 REPLAY_SPEEDUP, REPLAY_MIN_S, REPLAY_MAX_S = 4.0, 0.5, 2.5
