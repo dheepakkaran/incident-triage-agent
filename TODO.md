@@ -12,12 +12,15 @@ Left: publishing, hosted-model providers, and a hosted-model eval row.
 - [ ] **Me:** measure cold start and per-run time on Streamlit Cloud; add the demo link and those numbers to the README.
 
 ## 2. LLM providers and keys
-- [ ] **Me:** separate APIs per agent: `INVESTIGATOR_PROVIDER_CHAIN` (Scout: Groq `openai/gpt-oss-120b`) and
+- [x] **Me (2026-10-13):** separate APIs per agent, done in code; waiting for keys to test live: `INVESTIGATOR_PROVIDER_CHAIN` (Scout: Groq `openai/gpt-oss-120b`) and
       `REVIEWER_PROVIDER_CHAIN` (Skeptic: Google AI Studio `gemma-4-31b-it`, a different model family for an independent
       check); both fall back to Ollama and default to `LLM_PROVIDER_CHAIN`. Two LLM clients in `Deps`; record each role's
       model in traces, reports and eval results; show each bot's model in the demo boxes.
       Measured split per case: Scout's side ~8.9K tokens, Skeptic's side ~4.6K (test runs, reviewer on vs off).
-- [ ] **You:** create free keys and put them in `.env` (and Streamlit Secrets), never in chat:
+- [ ] **You:** revoke the two keys pasted in chat on 2026-10-13, create new ones, and paste them into `.env` yourself
+      (`GROQ_API_KEY=` line 12, `GOOGLE_API_KEY=` line 13; the Google one comes from aistudio.google.com/apikey, starts with `AIza`).
+      Then I run `python -m triage smoke llm` (it tests Scout's and Skeptic's chains separately).
+- [ ] **You:** other free keys, same way, never in chat:
       Groq, Google AI Studio (Gemma 4), Cerebras (30-day trial), Mistral; OpenRouter optional.
 - [ ] **Me:** add providers `cerebras`, `mistral` (OpenAI-compatible endpoints) and `google` (Gemma 4 via `langchain-google-genai`);
       default chain `groq,cerebras,google,mistral,ollama`; smoke-test tool calling on each (`python -m triage smoke llm`).

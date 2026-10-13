@@ -42,11 +42,15 @@ def _path(name: str, default: Path) -> Path:
 class Settings:
     # LLM providers
     provider_chain: tuple[str, ...]
+    investigator_chain: tuple[str, ...]  # Scout: investigate, diagnose, choose the action
+    reviewer_chain: tuple[str, ...]  # Skeptic: review. A different model family gives a more independent check.
     groq_model: str
     openrouter_model: str
     ollama_model: str
+    google_model: str
     groq_api_key: str
     openrouter_api_key: str
+    google_api_key: str
     ollama_host: str
     llm_timeout_s: float
     llm_cache_enabled: bool
@@ -75,14 +79,21 @@ class Settings:
 def get_settings() -> Settings:
     data_dir = _path("DATA_DIR", ROOT / "data")
     cache_dir = _path("CACHE_DIR", ROOT / ".cache")
-    chain = tuple(p.strip() for p in _str("LLM_PROVIDER_CHAIN", "groq,openrouter,ollama").split(",") if p.strip())
+    def chain_of(name: str, default: str) -> tuple[str, ...]:
+        return tuple(p.strip() for p in _str(name, default).split(",") if p.strip())
+
+    chain = chain_of("LLM_PROVIDER_CHAIN", "groq,google,openrouter,ollama")
     return Settings(
         provider_chain=chain,
+        investigator_chain=chain_of("INVESTIGATOR_PROVIDER_CHAIN", ",".join(chain)),
+        reviewer_chain=chain_of("REVIEWER_PROVIDER_CHAIN", ",".join(chain)),
         groq_model=_str("GROQ_MODEL", "openai/gpt-oss-120b"),
         openrouter_model=_str("OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free"),
         ollama_model=_str("OLLAMA_MODEL", "qwen3:8b"),
+        google_model=_str("GOOGLE_MODEL", "gemma-4-31b-it"),
         groq_api_key=_str("GROQ_API_KEY", ""),
         openrouter_api_key=_str("OPENROUTER_API_KEY", ""),
+        google_api_key=_str("GOOGLE_API_KEY", ""),
         ollama_host=_str("OLLAMA_HOST", "http://localhost:11434"),
         llm_timeout_s=_float("LLM_TIMEOUT_S", 120.0),
         llm_cache_enabled=_bool("LLM_CACHE_ENABLED", True),

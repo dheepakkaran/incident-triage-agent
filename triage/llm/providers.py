@@ -75,6 +75,20 @@ def build_chat_model(provider: str, settings: Settings) -> ModelHandle | None:
         )
         return ModelHandle("openrouter", settings.openrouter_model, chat)
 
+    if provider == "google":
+        if not settings.google_api_key:
+            return None
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        chat = ChatGoogleGenerativeAI(
+            model=settings.google_model,  # default: Gemma 4 31B, open weights, served by Google AI Studio
+            google_api_key=settings.google_api_key,
+            temperature=0,
+            max_retries=0,
+            timeout=settings.llm_timeout_s,
+        )
+        return ModelHandle("google", settings.google_model, chat)
+
     if provider == "ollama":
         if not _ollama_has_model(settings.ollama_host, settings.ollama_model):
             return None
@@ -131,9 +145,11 @@ class LLMClient:
         self._sleep = sleep
 
     @classmethod
-    def from_settings(cls, settings: Settings | None = None, only: str | None = None) -> "LLMClient":
+    def from_settings(cls, settings: Settings | None = None, only: str | None = None, role: str | None = None) -> "LLMClient":
+        """`only` pins one provider; `role` ('investigator' / 'reviewer') uses that agent's own chain."""
         settings = settings or get_settings()
-        chain = [only] if only else list(settings.provider_chain)
+        by_role = {"investigator": settings.investigator_chain, "reviewer": settings.reviewer_chain}
+        chain = [only] if only else list(by_role.get(role, settings.provider_chain))
         handles = [h for h in (build_chat_model(p, settings) for p in chain) if h is not None]
         cache = DiskCache(settings.cache_dir / "llm") if settings.llm_cache_enabled else None
         return cls(handles, cache)

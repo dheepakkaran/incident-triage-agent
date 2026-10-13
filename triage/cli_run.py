@@ -42,7 +42,12 @@ def ask_approval(request: dict) -> dict:
 def run_case_cli(case_id: str, auto_approve: bool, reviewer: str | None, provider: str | None) -> int:
     settings = get_settings()
     reviewer_enabled = settings.reviewer_enabled if reviewer is None else reviewer == "on"
-    deps = Deps(llm=LLMClient.from_settings(settings, only=provider), settings=settings, reviewer_enabled=reviewer_enabled)
+    deps = Deps(
+        llm=LLMClient.from_settings(settings, only=provider, role="investigator"),
+        reviewer_llm=LLMClient.from_settings(settings, only=provider, role="reviewer"),
+        settings=settings,
+        reviewer_enabled=reviewer_enabled,
+    )
 
     settings.runs_dir.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(settings.runs_dir / "checkpoints.db", check_same_thread=False)
@@ -52,7 +57,9 @@ def run_case_cli(case_id: str, auto_approve: bool, reviewer: str | None, provide
     config = thread_config(state["run_id"])
     console.print(f"[bold]{case_id}[/bold]  run {state['run_id']}")
     console.print(f"Alert: {state['alert']['text']}")
-    console.print("LLM: " + ", ".join(f"{h.provider}:{h.model}" for h in deps.llm.handles) + f" | reviewer {'on' if reviewer_enabled else 'off'}")
+    scout = ", ".join(f"{h.provider}:{h.model}" for h in deps.llm.handles)
+    skeptic = ", ".join(f"{h.provider}:{h.model}" for h in deps.review_llm.handles)
+    console.print(f"Scout: {scout} | Skeptic: {skeptic if reviewer_enabled else 'off'}")
 
     payload = state
     while True:

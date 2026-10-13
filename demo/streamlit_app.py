@@ -27,8 +27,9 @@ import streamlit as st  # noqa: E402
 
 # Secrets stay on the server: copy the key into the process environment, never into the page.
 try:
-    if "GROQ_API_KEY" in st.secrets and not os.getenv("GROQ_API_KEY"):
-        os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+    for secret in ("GROQ_API_KEY", "GOOGLE_API_KEY"):
+        if secret in st.secrets and not os.getenv(secret):
+            os.environ[secret] = st.secrets[secret]
 except FileNotFoundError:  # no secrets file when running locally without one
     pass
 

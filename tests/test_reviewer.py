@@ -133,3 +133,19 @@ def test_reviewer_disabled_skips_review(mock_deps_factory):
     result = run_incident(CASE, deps, auto_approve=True)
     assert "review" not in nodes_of(result)
     assert result["status"] == "diagnosed"
+
+
+def test_reviewer_can_run_on_its_own_model(mock_deps_factory):
+    """Scout and Skeptic on different clients: the review prompts go only to the reviewer's model."""
+    from triage.llm.mock import ScriptedChatModel
+    from triage.llm.providers import LLMClient, ModelHandle
+
+    deps = mock_deps_factory([tool_call("get_metric_changes", {}), "cart cpu", as_json(GOOD_DIAGNOSIS), SCALE])
+    skeptic_model = ScriptedChatModel([AGREE])
+    deps.reviewer_llm = LLMClient([ModelHandle("mock", "skeptic-model", skeptic_model)], cache=None)
+    result = run_incident(CASE, deps, auto_approve=True)
+
+    assert result["status"] == "diagnosed"
+    assert len(skeptic_model.prompts) == 1 and skeptic_model.prompts[0][0].content.startswith("You review another")
+    assert all(not p[0].content.startswith("You review another") for p in deps.extras["model"].prompts)
+    assert {c["model"] for c in result["llm_calls"] if c["purpose"].startswith("review")} == {"skeptic-model"}
