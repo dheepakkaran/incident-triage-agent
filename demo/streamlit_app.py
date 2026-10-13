@@ -6,6 +6,7 @@ Replay mode (default) runs the real graph on recorded model replies, with no API
 Live mode uses Groq through the server-side secret GROQ_API_KEY.
 """
 
+import html
 import os
 import sys
 import time
@@ -29,6 +30,46 @@ except FileNotFoundError:  # no secrets file when running locally without one
     pass
 
 st.set_page_config(page_title="Incident triage agent", page_icon="🚨", layout="wide")
+
+# Each agent has its own orb: Scout (investigator) breathes with a scanning satellite,
+# Skeptic (reviewer) has a spinning inspection ring. Motion stops for reduced-motion users.
+ORB_CSS = """
+<style>
+.orb {width: 22px; height: 22px; border-radius: 50%; display: inline-block; position: relative;
+      vertical-align: middle; margin-right: 8px; flex: none;}
+.orb.lg {width: 46px; height: 46px; margin-right: 12px;}
+.orb.scout {background: radial-gradient(circle at 32% 28%, #f0fdff 0%, #5ad8ff 30%, #1f6bff 68%, #0a2a73 100%);
+            box-shadow: 0 0 10px 2px #3fc6ff88; animation: orb-breathe 2.8s ease-in-out infinite;}
+.orb.scout::after {content: ""; position: absolute; width: 24%; height: 24%; border-radius: 50%;
+                   background: #c9f6ff; box-shadow: 0 0 6px #c9f6ff; top: -12%; left: 38%;
+                   transform-origin: 50% 258%; animation: orb-spin 3.2s linear infinite;}
+.orb.skeptic {background: radial-gradient(circle at 36% 30%, #fff4dc 0%, #ffbe55 28%, #ff4f8b 64%, #4e0b36 100%);
+              box-shadow: 0 0 10px 2px #ff4f8b77;}
+.orb.skeptic::before {content: ""; position: absolute; inset: -18%; border-radius: 50%;
+                      background: conic-gradient(from 0deg, transparent 0 62%, #ffd27a 80%, transparent 96%);
+                      -webkit-mask: radial-gradient(circle, transparent 57%, #000 60%);
+                      mask: radial-gradient(circle, transparent 57%, #000 60%);
+                      animation: orb-spin 1.6s linear infinite;}
+@keyframes orb-breathe {0%, 100% {box-shadow: 0 0 8px 1px #3fc6ff66; transform: scale(1);}
+                        50% {box-shadow: 0 0 16px 4px #3fc6ffaa; transform: scale(1.06);}}
+@keyframes orb-spin {to {transform: rotate(360deg);}}
+@media (prefers-reduced-motion: reduce) {.orb, .orb::before, .orb::after {animation: none !important;}}
+.agent-card {display: flex; align-items: center; padding: 10px 14px; border-radius: 14px;
+             border: 1px solid #8884; margin-bottom: 8px;}
+.agent-card b {font-size: 1.05rem;}
+.agent-card small {opacity: .75;}
+.orb-h {display: flex; align-items: center; font-size: 1.35rem; font-weight: 600; margin: 1.2rem 0 .4rem;}
+</style>
+"""
+st.markdown(ORB_CSS, unsafe_allow_html=True)
+
+
+def orb(agent: str, large: bool = False) -> str:
+    return f'<span class="orb {agent}{" lg" if large else ""}" aria-hidden="true"></span>'
+
+
+def orb_heading(agent: str, text: str) -> None:
+    st.markdown(f'<div class="orb-h">{orb(agent, large=True)}{text}</div>', unsafe_allow_html=True)
 
 
 @st.cache_resource(show_spinner="Loading data, embedding model and runbook index (first visit only)...")
@@ -69,7 +110,8 @@ def run_graph(payload, label: str) -> None:
                 ss.run_values, ss.pending = values, pending
                 if node:
                     step = (values.get("steps") or [{}])[-1]
-                    status.write(f"`{node}` done ({step.get('seconds', 0)}s)")
+                    who = NAMES.get(ACTOR.get(node, ""), "")
+                    status.write(f"{who + ' · ' if who else ''}`{node}` done ({step.get('seconds', 0)}s)")
         except LLMError as err:
             ss.message = f"The live model failed ({str(err)[:200]}). Free-tier quota may be used up; try Replay."
             status.update(label="Run failed", state="error")
@@ -109,17 +151,14 @@ def decide(approved: bool, note: str) -> None:
 
 
 ACTOR = {
-    "validate_alert": "🛡️ guardrail",
-    "investigate": "🔎 investigator",
-    "run_tools": "🔎 investigator · tools",
-    "diagnose": "🔎 investigator",
-    "review": "🧐 reviewer",
-    "review_tools": "🧐 reviewer · tools",
-    "propose_action": "🛠️ action",
-    "approval_gate": "🙋 human gate",
-    "escalate": "📣 escalate",
-    "report": "📄 report",
+    "investigate": "scout",
+    "run_tools": "scout",
+    "diagnose": "scout",
+    "review": "skeptic",
+    "review_tools": "skeptic",
 }
+OTHER = {"validate_alert": "🛡️", "propose_action": "🛠️", "approval_gate": "🙋", "escalate": "📣", "report": "📄"}
+NAMES = {"scout": "Scout", "skeptic": "Skeptic"}
 
 
 def show_timeline(values: dict) -> None:
@@ -127,8 +166,12 @@ def show_timeline(values: dict) -> None:
     for step in values.get("steps") or []:
         extra = {k: v for k, v in step.items() if k not in ("node", "seconds", "calls", "tool_calls")}
         detail = ", ".join(f"{k}={v}" for k, v in extra.items())
-        actor = ACTOR.get(step["node"], "")
-        st.markdown(f"{actor} **`{step['node']}`** · {step.get('seconds', 0)}s {('· ' + detail) if detail else ''}")
+        agent = ACTOR.get(step["node"])
+        who = f"{orb(agent)}<b>{NAMES[agent]}</b>" if agent else OTHER.get(step["node"], "")
+        st.markdown(
+            f"{who} <code>{step['node']}</code> · {step.get('seconds', 0)}s {('· ' + html.escape(detail)) if detail else ''}",
+            unsafe_allow_html=True,
+        )
         for call in step.get("calls") or []:
             if "id" in call:
                 output = results.get(call["id"], {}).get("data", "")
@@ -180,11 +223,11 @@ def show_reviewer(values: dict) -> None:
             st.code(results.get(c["id"], {}).get("data", "")[:1500], language=None)
     last = reviews[-1]["verdict"]
     if last == "agree":
-        st.caption("Outcome: the reviewer agreed, so the diagnosis went on to the action step.")
+        st.caption("Outcome: Skeptic agreed, so Scout's diagnosis went on to the action step.")
     elif len(reviews) == 1:
-        st.caption("Outcome: sent back to the investigator once with the reviewer's reason.")
+        st.caption("Outcome: sent back to Scout once, with Skeptic's reason.")
     else:
-        st.caption("Outcome: still 'revise' after one revision round, so the case was escalated with both views.")
+        st.caption("Outcome: Skeptic still said 'revise' after one revision round, so the case was escalated with both views.")
 
 
 def show_report(values: dict) -> None:
@@ -199,6 +242,17 @@ def show_report(values: dict) -> None:
 
 st.title("🚨 Incident triage agent")
 st.caption("First-pass root-cause analysis with LangGraph, guardrails, a reviewer agent and a human approval gate. Nothing is ever executed.")
+scout_col, skeptic_col = st.columns(2)
+scout_col.markdown(
+    f'<div class="agent-card">{orb("scout", large=True)}<div><b>Scout</b> · investigator<br>'
+    "<small>Calls the 5 read-only tools, follows the call graph, writes the diagnosis with quoted evidence.</small></div></div>",
+    unsafe_allow_html=True,
+)
+skeptic_col.markdown(
+    f'<div class="agent-card">{orb("skeptic", large=True)}<div><b>Skeptic</b> · reviewer<br>'
+    "<small>Tries to prove Scout wrong: is the blamed service the cause, or a victim of a dependency?</small></div></div>",
+    unsafe_allow_html=True,
+)
 triage_tab, results_tab, guard_tab, about_tab = st.tabs(["Triage", "Results", "Guardrails", "About"])
 
 with triage_tab:
@@ -221,9 +275,9 @@ with triage_tab:
         else:
             st.caption("Pick a case and press Run.")
     with side_col:
-        st.subheader("Diagnosis")
+        orb_heading("scout", "Scout's diagnosis")
         show_diagnosis(values)
-        st.subheader("Reviewer agent")
+        orb_heading("skeptic", "Skeptic's review")
         show_reviewer(values)
         st.subheader("Approval")
         pending = ss.pending if values else None
