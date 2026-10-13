@@ -130,15 +130,17 @@ def last_moods(transcript: list) -> dict:
 def render(transcript: list, typing: str | None = None) -> str:
     """Chat bubbles. `typing` ('scout' or 'skeptic') adds a live "is typing" bubble at the end."""
     parts = []
+    latest = {who: i for i, (who, *_rest) in enumerate(transcript)}  # each speaker's latest message
     for i, entry in enumerate(transcript):
         who, text = entry[0], entry[1]
         mood = entry[2] if len(entry) > 2 else ""
         newest = i == len(transcript) - 1 and not typing
-        new = " new" if newest else ""  # only the newest message pops in and shows its badge
+        new = " new" if newest else ""  # only the newest message pops in
+        badge = (" badge" if latest.get(who) == i else "") + (" pop" if newest else "")
         if who in ("scout", "skeptic"):
             name, role = WHO[who]
             parts.append(
-                f'<div class="msg {who}{new}">{orb_html(who, mood + (" pop" if newest else ""), "md")}'
+                f'<div class="msg {who}{new}">{orb_html(who, mood + badge, "md")}'
                 f'<div class="bubble"><div class="who">{name} <small>· {role}</small></div>{text}</div></div>'
             )
         elif who == "human":

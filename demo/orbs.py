@@ -69,15 +69,16 @@ ORB_CSS = """
 .orb::after {position: absolute; right: -22%; top: -30%; min-width: 46%; height: 46%; padding: 0 8%;
              border-radius: 99px; background: #fff; color: #10131a; font: 700 calc(var(--lw) * 6)/1 system-ui, sans-serif;
              display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px #0006;
-             content: ""; opacity: 0; transform: scale(.4);}
+             content: ""; opacity: 0; transform: scale(.4); transition: opacity .3s, transform .3s;}
 .orb.think::after {content: "…";}
 .orb.suspicious::after {content: "?";}
 .orb.doubt::after, .orb.surprised::after {content: "!"; background: #ff3b5c; color: #fff;}
 .orb.skeptic.happy::after {content: "✓"; background: #2fd18a; color: #fff;}
 .orb.scout.happy::after {content: "✦"; background: #ffd25a;}
-/* only bots marked "pop" (the newest chat message, the header) show the badge, once */
-.orb.pop.think::after, .orb.pop.suspicious::after, .orb.pop.doubt::after, .orb.pop.surprised::after, .orb.pop.happy::after {
-  animation: bot-badge 2.6s ease forwards;}
+/* "badge": shown (each agent's latest message, the header). "pop": shown with a bounce, once (newest message). */
+.orb.badge.think::after, .orb.badge.suspicious::after, .orb.badge.doubt::after, .orb.badge.surprised::after,
+.orb.badge.happy::after, .orb.surprised::after {opacity: 1; transform: scale(1);}
+.orb.pop.badge::after {animation: bot-badge .5s ease;}
 /* cheek glow when happy (::before) */
 .orb::before {content: ""; position: absolute; left: 14%; right: 14%; top: 60%; height: 14%; opacity: 0;
               background: radial-gradient(closest-side, #ff8fb8cc, transparent) left / 34% 100% no-repeat,
@@ -87,8 +88,8 @@ ORB_CSS = """
 /* squash and stretch whenever the newest message's bot changes state */
 .new .orb {animation: bot-squash .55s cubic-bezier(.3, 1.6, .5, 1) 1, bot-float 3.4s ease-in-out .55s infinite;}
 
-@keyframes bot-badge {0% {opacity: 0; transform: scale(.4) translateY(30%);} 12% {opacity: 1; transform: scale(1.12);}
-                      20%, 80% {opacity: 1; transform: scale(1);} 100% {opacity: 0; transform: scale(.8) translateY(-20%);}}
+@keyframes bot-badge {0% {opacity: 0; transform: scale(.4) translateY(30%);} 60% {opacity: 1; transform: scale(1.15);}
+                      100% {opacity: 1; transform: scale(1);}}
 @keyframes bot-squash {0% {transform: scale(1, 1);} 30% {transform: scale(1.18, .82);} 60% {transform: scale(.92, 1.1);} 100% {transform: scale(1, 1);}}
 @keyframes bot-float {0%, 100% {transform: translateY(0);} 50% {transform: translateY(-7%);}}
 @keyframes bot-blink {0%, 94%, 100% {transform: scaleY(1);} 97% {transform: scaleY(.1);}}
@@ -123,7 +124,7 @@ def header_html(scout_mood: str, skeptic_mood: str, dark: bool) -> str:
     ):
         bots += f"""
         <div class="bot" data-agent="{agent}">
-          <div class="face">{orb_html(agent, mood + " pop", "xl")}<div class="say"></div></div>
+          <div class="face">{orb_html(agent, mood + " badge pop", "xl")}<div class="say"></div></div>
           <div class="txt"><b>{name}</b> · {role}<br><small>{blurb}</small><br><span class="hint">click me</span></div>
         </div>"""
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>

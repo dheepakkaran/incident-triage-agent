@@ -19,6 +19,9 @@ DB_PATH = HERE / "data" / "telemetry.db"
 DB_REPO = os.getenv("DEMO_DB_REPO", "dheepakkaran/incident-triage-telemetry")  # a public HF *dataset*
 LIVE_PER_SESSION = int(os.getenv("LIVE_RUNS_PER_SESSION", "3"))
 LIVE_PER_DAY = int(os.getenv("LIVE_RUNS_PER_DAY", "50"))
+# Replay plays each model call back at 4x its recorded speed (0.5 s to 2.5 s), so the
+# "typing" bubble lasts about as long, relatively, as the model really thought.
+REPLAY_SPEEDUP, REPLAY_MIN_S, REPLAY_MAX_S = 4.0, 0.5, 2.5
 
 
 def cpu_quota() -> int:
@@ -90,11 +93,13 @@ class ReplayChatModel:
     recorded reply. That is enough to exercise the real reject -> re-investigate path.
     """
 
-    def __init__(self, llm_calls: list[dict]):
+    def __init__(self, llm_calls: list[dict], pace: bool = False):
         from langchain_core.messages import AIMessage
 
         self._AIMessage = AIMessage
         self.replies = [self._message(c["reply"]) for c in llm_calls]
+        self.latencies = [c.get("latency_s", 0.0) for c in llm_calls]
+        self.pace = pace
         self.last_by_kind: dict = {}
 
     def _message(self, reply: dict):
@@ -108,6 +113,11 @@ class ReplayChatModel:
         kind = _kind(messages)
         if self.replies:
             reply = self.replies.pop(0)
+            if self.pace:
+                import time
+
+                recorded = self.latencies.pop(0)
+                time.sleep(min(max(recorded / REPLAY_SPEEDUP, REPLAY_MIN_S), REPLAY_MAX_S))
         elif kind == "investigate":
             reply = self._AIMessage(content="Re-checked the evidence after the engineer's feedback; it still points the same way.")
         else:
@@ -164,7 +174,7 @@ def start_run(case_id: str, mode: str, replay: dict):
         description = f"Live run on groq:{settings.groq_model}"
     else:
         model = replay["config"]["provider_chain"][0]
-        llm = LLMClient([ModelHandle("replay", model, ReplayChatModel(replay["llm_calls"]))], cache=None)
+        llm = LLMClient([ModelHandle("replay", model, ReplayChatModel(replay["llm_calls"], pace=True))], cache=None)
         reviewer = replay["config"]["reviewer_enabled"]
         description = f"Replay of the recorded eval run ({model}, prompt {replay['config']['prompt_version']}); no API calls"
     deps = Deps(llm=llm, settings=settings, reviewer_enabled=reviewer)

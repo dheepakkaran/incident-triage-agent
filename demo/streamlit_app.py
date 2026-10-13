@@ -77,7 +77,7 @@ ss.setdefault("pending", None)
 ss.setdefault("message", "")
 ss.setdefault("transcript", [])
 ss.setdefault("live", False)
-REPLAY_PACE_S = 0.35  # replay is instant; space the messages out so the conversation is readable
+REPLAY_PACE_S = 0.6  # pause between messages in replay (model calls are paced separately, in core.py)
 
 
 # ---- running -------------------------------------------------------------
@@ -95,10 +95,8 @@ def run_graph(payload, chat_box) -> None:
                     time.sleep(REPLAY_PACE_S)
             # While the next step runs, the agent that owns it is "typing".
             typing = None if pending else core.next_agent(ss.graph, ss.run_id)
-            if typing:
+            if typing:  # stays up while that agent's next step runs (the real or replayed model call)
                 chat_box.markdown(chat.render(ss.transcript, typing=typing), unsafe_allow_html=True)
-                if not ss.live:
-                    time.sleep(REPLAY_PACE_S)
     except LLMError as err:
         ss.message = f"The live model failed ({str(err)[:200]}). Free-tier quota may be used up; try Replay."
         return
