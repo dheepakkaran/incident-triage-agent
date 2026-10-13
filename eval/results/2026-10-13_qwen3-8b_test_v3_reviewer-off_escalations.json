@@ -1,0 +1,80 @@
+{
+  "kind": "analysis",
+  "source": "2026-10-13_qwen3-8b_test_v3_reviewer-off_agent.json",
+  "escalated": 3,
+  "escalated_with_right_service_in_an_attempt": 3,
+  "cases": [
+    {
+      "case_id": "case_007",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "mem"
+      },
+      "escalation_reason": "diagnosis failed output guardrails after 3 attempts: fault_type 'disk' needs a quote showing productcatalogservice disk_io_bytes; none of your quotes does. Quote that metric line, or pick the fault type your evidence supports",
+      "final_top": [],
+      "diagnosis_attempts": [
+        {
+          "service": "productcatalogservice",
+          "fault_type": "disk"
+        },
+        {
+          "service": "productcatalogservice",
+          "fault_type": "disk"
+        },
+        {
+          "service": "productcatalogservice",
+          "fault_type": "disk"
+        }
+      ],
+      "an_attempt_named_the_right_service": true
+    },
+    {
+      "case_id": "case_011",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "socket"
+      },
+      "escalation_reason": "diagnosis failed output guardrails after 3 attempts: fault_type 'disk' needs a quote showing currencyservice disk_io_bytes; none of your quotes does. Quote that metric line, or pick the fault type your evidence supports",
+      "final_top": [],
+      "diagnosis_attempts": [
+        {
+          "service": "currencyservice",
+          "fault_type": "disk"
+        },
+        {
+          "service": "currencyservice",
+          "fault_type": "disk"
+        },
+        {
+          "service": "currencyservice",
+          "fault_type": "disk"
+        }
+      ],
+      "an_attempt_named_the_right_service": true
+    },
+    {
+      "case_id": "case_012",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "socket"
+      },
+      "escalation_reason": "diagnosis failed output guardrails after 3 attempts: fault_type 'disk' needs a quote showing recommendationservice disk_io_bytes; none of your quotes does. Quote that metric line, or pick the fault type your evidence supports",
+      "final_top": [],
+      "diagnosis_attempts": [
+        {
+          "service": "recommendationservice",
+          "fault_type": "disk"
+        },
+        {
+          "service": "recommendationservice",
+          "fault_type": "disk"
+        },
+        {
+          "service": "recommendationservice",
+          "fault_type": "disk"
+        }
+      ],
+      "an_attempt_named_the_right_service": true
+    }
+  ]
+}

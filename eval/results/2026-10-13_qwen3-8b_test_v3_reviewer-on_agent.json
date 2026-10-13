@@ -1,0 +1,644 @@
+{
+  "kind": "agent",
+  "date": "2026-10-13 01:42:54",
+  "split": "test",
+  "provider": "ollama",
+  "model": "qwen3:8b",
+  "provider_chain": [
+    "ollama:qwen3:8b"
+  ],
+  "prompt_version": "v3",
+  "temperature": 0,
+  "reviewer_enabled": true,
+  "max_tool_calls": 8,
+  "reviewer_max_tool_calls": 3,
+  "confidence_threshold": 0.6,
+  "approval_policy": "auto-approve (fixed eval policy)",
+  "metrics": {
+    "n": 15,
+    "top1": 0.667,
+    "top3": 0.667,
+    "fault_type": 0.533,
+    "runbook_hit": 0.533,
+    "escalation_rate": 0.267,
+    "wrong_but_confident": 2,
+    "avg_tool_calls": 3.2,
+    "avg_tokens": 13504.333,
+    "avg_llm_latency_s": 63.941,
+    "avg_wall_s": 65.72,
+    "errors": 0
+  },
+  "cases": [
+    {
+      "case_id": "case_006",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "recommendationservice"
+        ],
+        "fault_type": "loss",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-packet-loss",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 10980,
+      "output_tokens": 843,
+      "llm_latency_s": 61.25,
+      "llm_calls": 8,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/service"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_006-20261013-012628-74c216",
+      "wall_s": 69.8
+    },
+    {
+      "case_id": "case_007",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [],
+        "fault_type": null,
+        "confidence": null
+      },
+      "top1": false,
+      "top3": false,
+      "fault_type_ok": false,
+      "runbook_id": null,
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": false,
+      "reviews": [],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 11205,
+      "output_tokens": 981,
+      "llm_latency_s": 61.18,
+      "llm_calls": 7,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/evidence",
+        "output/evidence",
+        "output/evidence"
+      ],
+      "escalation_reason": "diagnosis failed output guardrails after 3 attempts: fault_type 'disk' needs a quote showing productcatalogservice disk_io_bytes; none of your quotes does. Quote that metric line, or pick the fault type your evidence supports",
+      "run_id": "case_007-20261013-012738-24be8a",
+      "wall_s": 61.7
+    },
+    {
+      "case_id": "case_008",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "recommendationservice"
+        ],
+        "fault_type": "loss",
+        "confidence": 0.95
+      },
+      "top1": false,
+      "top3": false,
+      "fault_type_ok": true,
+      "runbook_id": "rb-packet-loss",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": true,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 11103,
+      "output_tokens": 823,
+      "llm_latency_s": 58.76,
+      "llm_calls": 8,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/service"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_008-20261013-012839-9b848c",
+      "wall_s": 60.5
+    },
+    {
+      "case_id": "case_009",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice"
+        ],
+        "fault_type": "cpu",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false,
+      "runbook_id": "rb-cpu-saturation",
+      "runbook_hit": false,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 12532,
+      "output_tokens": 701,
+      "llm_latency_s": 51.03,
+      "llm_calls": 9,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/evidence",
+        "output/service"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_009-20261013-012940-d3bc9d",
+      "wall_s": 52.6
+    },
+    {
+      "case_id": "case_010",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": false,
+      "top3": false,
+      "fault_type_ok": false,
+      "runbook_id": null,
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": true,
+      "reviews": [
+        "revise"
+      ],
+      "tool_calls": 4,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 23266,
+      "output_tokens": 1865,
+      "llm_latency_s": 132.79,
+      "llm_calls": 12,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/schema",
+        "output/schema",
+        "output/schema"
+      ],
+      "escalation_reason": "reviewer output failed guardrails: reply was not a JSON object",
+      "run_id": "case_010-20261013-013032-2c8977",
+      "wall_s": 134.0
+    },
+    {
+      "case_id": "case_011",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [],
+        "fault_type": null,
+        "confidence": null
+      },
+      "top1": false,
+      "top3": false,
+      "fault_type_ok": false,
+      "runbook_id": null,
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": false,
+      "reviews": [],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 11073,
+      "output_tokens": 863,
+      "llm_latency_s": 50.86,
+      "llm_calls": 7,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/evidence",
+        "output/evidence",
+        "output/evidence"
+      ],
+      "escalation_reason": "diagnosis failed output guardrails after 3 attempts: fault_type 'disk' needs a quote showing currencyservice disk_io_bytes; none of your quotes does. Quote that metric line, or pick the fault type your evidence supports",
+      "run_id": "case_011-20261013-013246-d69b6d",
+      "wall_s": 51.8
+    },
+    {
+      "case_id": "case_012",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [],
+        "fault_type": null,
+        "confidence": null
+      },
+      "top1": false,
+      "top3": false,
+      "fault_type_ok": false,
+      "runbook_id": null,
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": false,
+      "reviews": [],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 11065,
+      "output_tokens": 842,
+      "llm_latency_s": 51.09,
+      "llm_calls": 7,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/evidence",
+        "output/evidence",
+        "output/evidence"
+      ],
+      "escalation_reason": "diagnosis failed output guardrails after 3 attempts: fault_type 'disk' needs a quote showing recommendationservice disk_io_bytes; none of your quotes does. Quote that metric line, or pick the fault type your evidence supports",
+      "run_id": "case_012-20261013-013338-546459",
+      "wall_s": 51.6
+    },
+    {
+      "case_id": "case_013",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice",
+          "checkoutservice"
+        ],
+        "fault_type": "cpu",
+        "confidence": 0.9
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-cpu-saturation",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 11023,
+      "output_tokens": 786,
+      "llm_latency_s": 53.55,
+      "llm_calls": 8,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/service"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_013-20261013-013430-383d40",
+      "wall_s": 54.9
+    },
+    {
+      "case_id": "case_014",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice",
+          "checkoutservice"
+        ],
+        "fault_type": "cpu",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false,
+      "runbook_id": "rb-cpu-saturation",
+      "runbook_hit": false,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "revise",
+        "agree"
+      ],
+      "tool_calls": 5,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 23016,
+      "output_tokens": 1598,
+      "llm_latency_s": 109.02,
+      "llm_calls": 13,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/service"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_014-20261013-013525-924288",
+      "wall_s": 110.3
+    },
+    {
+      "case_id": "case_015",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "recommendationservice"
+        ],
+        "fault_type": "cpu",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-cpu-saturation",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 9348,
+      "output_tokens": 760,
+      "llm_latency_s": 48.78,
+      "llm_calls": 7,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": null,
+      "run_id": "case_015-20261013-013715-82d214",
+      "wall_s": 51.0
+    },
+    {
+      "case_id": "case_016",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "recommendationservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-network-latency",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 11193,
+      "output_tokens": 836,
+      "llm_latency_s": 58.17,
+      "llm_calls": 8,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/service"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_016-20261013-013806-11345d",
+      "wall_s": 59.5
+    },
+    {
+      "case_id": "case_017",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "currencyservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false,
+      "runbook_id": "rb-network-latency",
+      "runbook_hit": false,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 9471,
+      "output_tokens": 702,
+      "llm_latency_s": 48.57,
+      "llm_calls": 7,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": null,
+      "run_id": "case_017-20261013-013906-2b0b9e",
+      "wall_s": 49.7
+    },
+    {
+      "case_id": "case_018",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-network-latency",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 11049,
+      "output_tokens": 639,
+      "llm_latency_s": 47.61,
+      "llm_calls": 8,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/evidence"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_018-20261013-013955-76851e",
+      "wall_s": 48.5
+    },
+    {
+      "case_id": "case_019",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice"
+        ],
+        "fault_type": "mem",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-memory-leak",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 11168,
+      "output_tokens": 852,
+      "llm_latency_s": 65.8,
+      "llm_calls": 8,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/evidence"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_019-20261013-014044-aaa4b9",
+      "wall_s": 67.1
+    },
+    {
+      "case_id": "case_020",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "currencyservice"
+        ],
+        "fault_type": "disk",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-disk-pressure",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "agree"
+      ],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 11191,
+      "output_tokens": 791,
+      "llm_latency_s": 60.66,
+      "llm_calls": 8,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/service"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_020-20261013-014151-536dd9",
+      "wall_s": 62.8
+    }
+  ]
+}

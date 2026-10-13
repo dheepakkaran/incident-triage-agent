@@ -47,6 +47,9 @@ def configure_environment() -> int:
     os.environ.setdefault("RUNBOOKS_DIR", str(HERE.parent / "runbooks"))
     os.environ.setdefault("LLM_CACHE_ENABLED", "false")
     os.environ.setdefault("LLM_PROVIDER_CHAIN", "groq")
+    # The project default is reviewer OFF (dev ablation). The demo exists to show the two agents
+    # working together, so it turns the reviewer on; replays come from the reviewer-on test run.
+    os.environ.setdefault("REVIEWER_ENABLED", "true")
     return int(threads)
 
 

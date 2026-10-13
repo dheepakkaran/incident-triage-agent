@@ -1,0 +1,284 @@
+{
+  "kind": "baseline",
+  "method": "largest relative metric change",
+  "date": "2026-10-13 01:43:14",
+  "split": "test",
+  "metrics": {
+    "n": 15,
+    "top1": 0.867,
+    "top3": 0.933,
+    "fault_type": 0.333
+  },
+  "cases": [
+    {
+      "case_id": "case_006",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "recommendationservice",
+          "frontend",
+          "productcatalogservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_007",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "recommendationservice",
+          "productcatalogservice",
+          "frontend"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_008",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice",
+          "recommendationservice",
+          "frontend"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_009",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice",
+          "adservice",
+          "checkoutservice"
+        ],
+        "fault_type": "cpu"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_010",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice",
+          "cartservice",
+          "paymentservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_011",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "currencyservice",
+          "frontend",
+          "checkoutservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_012",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "recommendationservice",
+          "frontend",
+          "currencyservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_013",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice",
+          "paymentservice",
+          "emailservice"
+        ],
+        "fault_type": "cpu"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_014",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice",
+          "adservice",
+          "frontend"
+        ],
+        "fault_type": "cpu"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_015",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "recommendationservice",
+          "frontend",
+          "adservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_016",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "recommendationservice",
+          "frontend",
+          "currencyservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_017",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "currencyservice",
+          "frontend",
+          "cartservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_018",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice",
+          "paymentservice",
+          "shippingservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": false,
+      "top3": false,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_019",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice",
+          "paymentservice",
+          "frontend"
+        ],
+        "fault_type": "cpu"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_020",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "currencyservice",
+          "frontend",
+          "checkoutservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    }
+  ]
+}

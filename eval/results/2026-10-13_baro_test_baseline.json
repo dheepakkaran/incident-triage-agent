@@ -1,0 +1,284 @@
+{
+  "kind": "baseline",
+  "method": "BARO (RCAEval 1.8.0, metrics only)",
+  "date": "2026-10-13 01:43:18",
+  "split": "test",
+  "metrics": {
+    "n": 15,
+    "top1": 0.2,
+    "top3": 0.933,
+    "fault_type": 0.267
+  },
+  "cases": [
+    {
+      "case_id": "case_006",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice",
+          "recommendationservice",
+          "redis"
+        ],
+        "fault_type": "loss"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_007",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "productcatalogservice",
+          "recommendationservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_008",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice",
+          "recommendationservice",
+          "frontend"
+        ],
+        "fault_type": "loss"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_009",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "emailservice",
+          "checkoutservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_010",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "emailservice",
+          "cartservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_011",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "cartservice",
+          "currencyservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_012",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "recommendationservice",
+          "checkoutservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_013",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "checkoutservice",
+          "cartservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_014",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "socket"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice",
+          "istio-init",
+          "redis"
+        ],
+        "fault_type": "cpu"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_015",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "recommendationservice",
+          "currencyservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_016",
+      "label": {
+        "service": "recommendationservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "recommendationservice",
+          "frontend"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_017",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "cartservice",
+          "currencyservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_018",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "shippingservice",
+          "paymentservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": false,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_019",
+      "label": {
+        "service": "checkoutservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice",
+          "redis",
+          "cartservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_020",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "redis",
+          "cartservice",
+          "currencyservice"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": true
+    }
+  ]
+}
