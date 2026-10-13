@@ -4,11 +4,13 @@ Status on 2026-10-13: Phases 1–12 are done and committed. The Streamlit demo w
 Left: publishing, hosted-model providers, and a hosted-model eval row.
 
 ## 1. Publish (needs you first)
-- [ ] **You:** create an empty public GitHub repo (no README / licence / .gitignore) and send the URL.
-- [ ] **Me:** push the repo; check the GitHub Actions CI run is green.
-- [ ] **You OK → me:** upload the 193 MB test-split DB to the public HF dataset `dheepakkaran/incident-triage-telemetry`
+- [x] **You:** created https://github.com/dheepakkaran/incident-triage-agent
+- [x] **Me (2026-10-13):** pushed with the feature-branch method: `main` = scaffold commit, all work on
+      `feature/incident-triage-agent`. **You:** open the pull request and merge it (link in the chat). Check CI is green.
+- [x] **Me (2026-10-13):** uploaded the 193 MB test-split DB to the public HF dataset `dheepakkaran/incident-triage-telemetry`
       (`python demo/build.py --results eval/results/2026-10-13_qwen3-8b_test_v3_reviewer-on_agent.json --upload`).
-- [ ] **You:** deploy on share.streamlit.io: repo, branch `main`, file `demo/streamlit_app.py`, Python 3.12, secret `GROQ_API_KEY`.
+- [ ] **You:** after the merge, deploy on share.streamlit.io: repo, branch `main`, file `demo/streamlit_app.py`, Python 3.12,
+      secrets `GROQ_API_KEY` and `GOOGLE_API_KEY`.
 - [ ] **Me:** measure cold start and per-run time on Streamlit Cloud; add the demo link and those numbers to the README.
 
 ## 2. LLM providers and keys
