@@ -170,14 +170,18 @@ def start_run(case_id: str, mode: str, replay: dict):
 
 
 def drive(graph, run_id: str, payload):
-    """Stream the graph until it ends or pauses. Yields (node, state_values, pending_interrupt)."""
+    """Stream the graph until it ends or pauses.
+
+    Yields (node, delta, state_values, pending_interrupt). `delta` is what that node returned,
+    so the chat view can say what just happened; `state_values` is the full state so far.
+    """
     from triage.agent.graph import thread_config
 
     config = thread_config(run_id)
     for update in graph.stream(payload, config, stream_mode="updates"):
         pending = update["__interrupt__"][0].value if "__interrupt__" in update else None
         node = next((k for k in update if k != "__interrupt__"), None)
-        yield node, graph.get_state(config).values, pending
+        yield node, (update.get(node) or {}) if node else {}, graph.get_state(config).values, pending
 
 
 def resume_payload(approved: bool, note: str):

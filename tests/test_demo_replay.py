@@ -51,3 +51,25 @@ def test_daily_cap(tmp_path):
     cap = core.DailyCap(2, tmp_path / "usage.json")
     assert [cap.take(), cap.take(), cap.take()] == [True, True, False]
     assert cap.used() == 2
+
+
+def test_chat_view_tells_the_story_in_order(mock_deps_factory):
+    """Each node's output becomes plain-language messages from Scout, Skeptic and the system."""
+    import chat
+
+    deps = mock_deps_factory([tool_call("get_metric_changes", {}), "cart cpu [t1]", as_json(GOOD_DIAGNOSIS), AGREE, SCALE])
+    graph = build_graph(deps)
+    from triage.agent.graph import initial_state, thread_config
+
+    state = initial_state(CASE, deps)
+    transcript = []
+    for update in graph.stream(state, thread_config(state["run_id"]), stream_mode="updates"):
+        for node, delta in update.items():
+            if node != "__interrupt__":
+                transcript += chat.messages_for(node, delta, graph.get_state(thread_config(state["run_id"])).values)
+    speakers = [who for who, _ in transcript]
+    assert speakers.index("scout") < speakers.index("skeptic")
+    text = chat.render(transcript)
+    assert "My diagnosis: <b>cartservice</b> has a <b>cpu</b> fault" in text
+    assert "I agree." in text and "Waiting for your approval." in text
+    assert 'class="orb scout"' in text and 'class="orb skeptic"' in text

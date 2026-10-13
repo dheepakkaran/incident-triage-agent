@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))  # so `import triage` works when Streamlit runs this file directly
 sys.path.insert(0, str(ROOT / "demo"))
 
+import chat  # noqa: E402
 import core  # noqa: E402
 
 THREADS = core.configure_environment()
@@ -62,6 +63,7 @@ ORB_CSS = """
 </style>
 """
 st.markdown(ORB_CSS, unsafe_allow_html=True)
+st.markdown(chat.CHAT_CSS, unsafe_allow_html=True)
 
 
 def orb(agent: str, large: bool = False) -> str:
@@ -97,32 +99,33 @@ ss.setdefault("actions", [])
 ss.setdefault("run_values", {})
 ss.setdefault("pending", None)
 ss.setdefault("message", "")
+ss.setdefault("transcript", [])
+ss.setdefault("live", False)
+REPLAY_PACE_S = 0.35  # replay is instant; space the messages out so the conversation is readable
 
 
 # ---- running -------------------------------------------------------------
 
 
-def run_graph(payload, label: str) -> None:
-    """Stream the graph, showing each node as it finishes, and keep the result in the session."""
-    with st.status(label, expanded=True) as status:
-        try:
-            for node, values, pending in core.drive(ss.graph, ss.run_id, payload):
-                ss.run_values, ss.pending = values, pending
-                if node:
-                    step = (values.get("steps") or [{}])[-1]
-                    who = NAMES.get(ACTOR.get(node, ""), "")
-                    status.write(f"{who + ' · ' if who else ''}`{node}` done ({step.get('seconds', 0)}s)")
-        except LLMError as err:
-            ss.message = f"The live model failed ({str(err)[:200]}). Free-tier quota may be used up; try Replay."
-            status.update(label="Run failed", state="error")
-            return
-        status.update(label="Paused for approval" if ss.pending else "Run finished", state="complete", expanded=False)
+def run_graph(payload, chat_box) -> None:
+    """Stream the graph; each finished node adds its messages to the conversation as it happens."""
+    try:
+        for node, delta, values, pending in core.drive(ss.graph, ss.run_id, payload):
+            ss.run_values, ss.pending = values, pending
+            for message in chat.messages_for(node, delta, values) if node else []:
+                ss.transcript.append(message)
+                chat_box.markdown(chat.render(ss.transcript), unsafe_allow_html=True)
+                if not ss.live:
+                    time.sleep(REPLAY_PACE_S)
+    except LLMError as err:
+        ss.message = f"The live model failed ({str(err)[:200]}). Free-tier quota may be used up; try Replay."
+        return
     approval, action = ss.run_values.get("approval") or {}, ss.run_values.get("action") or {}
     if not ss.pending and approval.get("approved") and action and ss.run_values.get("status") == "diagnosed":
         ss.actions.append(f"{time.strftime('%H:%M:%S')}  SIMULATED {action['action']}({action['target_service']})  [{ss.run_values['case_id']}]")
 
 
-def start(case_id: str, mode: str) -> None:
+def start(case_id: str, mode: str, chat_box) -> None:
     settings = get_settings()
     live = mode == "Run live"
     if live and not settings.groq_api_key:
@@ -135,16 +138,19 @@ def start(case_id: str, mode: str) -> None:
         ss.message = ""
     if live:
         ss.live_runs += 1
+    ss.live = live
     ss.graph, state, description = core.start_run(case_id, "live" if live else "replay", REPLAYS[case_id])
     ss.reviewer_on = REPLAYS[case_id]["config"]["reviewer_enabled"] if not live else settings.reviewer_enabled
     ss.run_id = state["run_id"]
     ss.message = ss.message or description + (f" ({ss.live_runs}/{core.LIVE_PER_SESSION} live runs used)" if live else "")
-    run_graph(state, "Investigating...")
+    ss.transcript = [("alert", html.escape(state["alert"]["text"]))]
+    run_graph(state, chat_box)
 
 
-def decide(approved: bool, note: str) -> None:
-    ss.message = "You approved the proposal." if approved else "You rejected the proposal; the agent re-investigates once."
-    run_graph(core.resume_payload(approved, note), "Resuming...")
+def decide(approved: bool, note: str, chat_box) -> None:
+    said = "✅ Approve." if approved else "❌ Reject."
+    ss.transcript.append(("human", said + (f" {html.escape(note)}" if note else "")))
+    run_graph(core.resume_payload(approved, note), chat_box)
 
 
 # ---- rendering -----------------------------------------------------------
@@ -253,53 +259,65 @@ skeptic_col.markdown(
     "<small>Tries to prove Scout wrong: is the blamed service the cause, or a victim of a dependency?</small></div></div>",
     unsafe_allow_html=True,
 )
-triage_tab, results_tab, guard_tab, about_tab = st.tabs(["Triage", "Results", "Guardrails", "About"])
+triage_tab, hood_tab, results_tab, guard_tab, about_tab = st.tabs(
+    ["💬 Triage", "🔧 Under the hood", "Results", "Guardrails", "About"]
+)
 
 with triage_tab:
     cases = sorted(REPLAYS)
     left, mid, right = st.columns([2, 2, 1])
     case_id = left.selectbox("Test case", cases)
     mode = mid.radio("Mode", ["Replay", "Run live"], horizontal=True)
-    if right.button("Run", type="primary", use_container_width=True):
-        start(case_id, mode)
-    st.info(f"**Alert:** {case_alert(get_settings().db_path, case_id)['text']}")
-    if ss.message:
-        st.caption(ss.message)
+    # Clicks are recorded once by callbacks and consumed here. A plain `if st.button(...)` can
+    # fire again when a long replay is interrupted by another widget change.
+    right.button("Run", type="primary", use_container_width=True, on_click=lambda: ss.update(run_request=True))
+    caption = st.empty()
+    chat_box = st.empty()
+    if ss.pop("run_request", False):
+        start(case_id, mode, chat_box)
+    caption.caption(ss.message or "Replay runs the real agent graph on the model replies recorded in the eval. No API calls.")
 
     values = ss.run_values if ss.run_values.get("case_id") == case_id else {}
-    timeline_col, side_col = st.columns([3, 2])
-    with timeline_col:
-        st.subheader("Timeline")
-        if values:
-            show_timeline(values)
-        else:
-            st.caption("Pick a case and press Run.")
-    with side_col:
-        orb_heading("scout", "Scout's diagnosis")
-        show_diagnosis(values)
-        orb_heading("skeptic", "Skeptic's review")
-        show_reviewer(values)
-        st.subheader("Approval")
-        pending = ss.pending if values else None
-        if pending:
-            st.markdown(f"**{pending['action']}({pending['target_service']})** · runbook `{pending['runbook_id']}`")
-            st.markdown(pending["reason"])
-            for e in pending.get("evidence", []):
-                st.markdown(f"- [{e['tool_call_id']}] `{e['quote']}`")
-            note = st.text_input("Note for the agent (optional)", key=f"note-{ss.run_id}")
-            yes, no = st.columns(2)
-            if yes.button("Approve", use_container_width=True):
-                decide(True, note)
-                st.rerun()
-            if no.button("Reject", use_container_width=True):
-                decide(False, note)
-                st.rerun()
-        else:
-            st.caption("No approval needed right now.")
-        st.subheader("Simulated action log")
+    if values and ss.transcript:
+        chat_box.markdown(chat.render(ss.transcript), unsafe_allow_html=True)
+    else:
+        alert_text = html.escape(case_alert(get_settings().db_path, case_id)["text"])
+        chat_box.markdown(chat.render([("alert", alert_text), ("system", "Press <b>Run</b> and the agents talk it through here.")]), unsafe_allow_html=True)
+
+    decision = ss.pop("decision", None)
+    if decision is not None and values and ss.pending:
+        decide(decision["approved"], decision["note"], chat_box)
+        st.rerun()
+
+    pending = ss.pending if values else None
+    if pending:
+        st.markdown(f"**🙋 Your call:** approve **{pending['action']}({pending['target_service']})**?")
+        note_key = f"note-{ss.run_id}-{len(ss.transcript)}"
+        st.text_input("Note for Scout (optional)", key=note_key)
+        yes, no, _ = st.columns([1, 1, 3])
+        yes.button("✅ Approve", use_container_width=True, on_click=lambda: ss.update(decision={"approved": True, "note": ss.get(note_key, "")}))
+        no.button("❌ Reject", use_container_width=True, on_click=lambda: ss.update(decision={"approved": False, "note": ss.get(note_key, "")}))
+
+    if values.get("report"):
+        with st.expander("📄 Incident report", expanded=not pending):
+            show_report(values)
+    with st.expander("Simulated action log"):
         st.code("\n".join(ss.actions) or "(nothing executed: approved actions are only logged here)", language=None)
-    st.subheader("Final incident report")
-    show_report(values)
+
+with hood_tab:
+    hood_values = ss.run_values if ss.run_values.get("case_id") == case_id else {}
+    if not hood_values:
+        st.caption("Run a case on the Triage tab; every step, tool output and guardrail decision shows up here.")
+    else:
+        timeline_col, side_col = st.columns([3, 2])
+        with timeline_col:
+            st.subheader("Timeline")
+            show_timeline(hood_values)
+        with side_col:
+            orb_heading("scout", "Scout's diagnosis")
+            show_diagnosis(hood_values)
+            orb_heading("skeptic", "Skeptic's review")
+            show_reviewer(hood_values)
 
 with results_tab:
     st.markdown(RESULTS_MD.split("## Adversarial")[0] if RESULTS_MD else "No results file.")
