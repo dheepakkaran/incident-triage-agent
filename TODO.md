@@ -1,17 +1,20 @@
 # TODO
 
-Status on 2026-10-13: Phases 1–12 are done and committed. The Streamlit demo works locally (replay + approve/reject).
-Left: publishing, hosted-model providers, and a hosted-model eval row.
+Status on 2026-10-13: Phases 1–13 are done, merged and deployed: https://incident-triage-agen.streamlit.app
+Left: hosted-model providers and a hosted-model eval row.
 
 ## 1. Publish (needs you first)
 - [x] **You:** created https://github.com/dheepakkaran/incident-triage-agent
-- [x] **Me (2026-10-13):** pushed with the feature-branch method: `main` = scaffold commit, all work on
-      `feature/incident-triage-agent`. **You:** open the pull request and merge it (link in the chat). Check CI is green.
+- [x] **Me (2026-10-13):** pushed one feature branch per phase; **you** merged them as PRs #1–#15 (merge commits).
+      CI green on Python 3.11 and 3.12.
 - [x] **Me (2026-10-13):** uploaded the 193 MB test-split DB to the public HF dataset `dheepakkaran/incident-triage-telemetry`
       (`python demo/build.py --results eval/results/2026-10-13_qwen3-8b_test_v3_reviewer-on_agent.json --upload`).
-- [ ] **You:** after the merge, deploy on share.streamlit.io: repo, branch `main`, file `demo/streamlit_app.py`, Python 3.12,
-      secrets `GROQ_API_KEY` and `GOOGLE_API_KEY`.
-- [ ] **Me:** measure cold start and per-run time on Streamlit Cloud; add the demo link and those numbers to the README.
+- [x] **You (2026-10-13):** deployed on share.streamlit.io (`main`, `demo/streamlit_app.py`; the cloud picked Python 3.14)
+      with secrets `GROQ_API_KEY` and `GOOGLE_API_KEY`.
+- [x] **Me (2026-10-13):** fixed what the first cloud runs showed (PR #16: mode switch could clear both options,
+      model-calls table, watcher noise) and added the demo link to the README. Checked by hand in the browser on case_006:
+      replay ~25 s to the approval step; live ~8–23 s, Scout on Groq and Skeptic on Gemma (seen in the model-calls table).
+      These timings are not in the README, because README numbers must come from a script-produced file.
 
 ## 2. LLM providers and keys
 - [x] **Me (2026-10-13):** separate APIs per agent, done and tested on real keys (case_001 end to end: 1 min 6 s,

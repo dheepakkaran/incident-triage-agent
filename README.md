@@ -4,6 +4,8 @@ An AI agent that does the first-pass investigation of a production alert in a mi
 
 Built with LangGraph (explicit `StateGraph`, `interrupt()`, SQLite checkpointer), Pydantic, SQLite, Chroma, MCP and free open-weight models. It is evaluated on 15 held-out failure cases from the RCAEval benchmark.
 
+**Live demo: [incident-triage-agen.streamlit.app](https://incident-triage-agen.streamlit.app)**. Replay any test case with no API calls, or run one live with Scout on Groq and Skeptic on Gemma.
+
 ---
 
 ## 1. The problem
@@ -209,11 +211,11 @@ pytest -q                               # no network, no LLM, no dataset needed
 }
 ```
 
-**Demo.** Run it locally with `streamlit run demo/streamlit_app.py`, or deploy it free on Streamlit Community Cloud (entry point `demo/streamlit_app.py`, Python 3.12, optional secret `GROQ_API_KEY`).
-- **Triage tab:** a live conversation between Scout (investigator) and Skeptic (reviewer), each with its own orb, and you approving or rejecting in the same thread.
-- **Under the hood tab:** every step, tool output and guardrail decision.
+**Demo.** It is live at [incident-triage-agen.streamlit.app](https://incident-triage-agen.streamlit.app). Run it locally with `streamlit run demo/streamlit_app.py`, or deploy your own copy free on Streamlit Community Cloud (entry point `demo/streamlit_app.py`, Python 3.12 or newer, secrets `GROQ_API_KEY` and `GOOGLE_API_KEY`; without them only Replay works).
+- **Conversation tab:** a live conversation between Scout (investigator) and Skeptic (reviewer), each with its own bot, and you approving or rejecting in the same thread.
+- **Under the hood tab:** every step, tool output and guardrail decision, plus a model-calls table showing which provider answered each agent.
 - **Replay mode** runs the real graph on the model replies recorded in the test run, with no API calls. The approval gate still pauses with `interrupt()` and resumes with `Command(resume=...)`.
-- **Live mode** uses Groq: 3 runs per session and a daily cap, and the key never reaches the browser.
+- **Live mode** uses two free APIs: Scout on Groq (`gpt-oss-120b`), Skeptic on Gemma 4 through Google AI Studio, with Groq as Skeptic's backup. 3 runs per session and a daily cap; the keys never reach the browser.
 - **Rebuilding:** `python demo/build.py --results eval/results/<test run>.json [--upload]` rebuilds the replays and the trimmed test-split DB. `--upload` publishes the DB to a public Hugging Face dataset, because it is too big for GitHub.
 - **Data for the demo:** the trimmed test-split DB lives at [huggingface.co/datasets/dheepakkaran/incident-triage-telemetry](https://huggingface.co/datasets/dheepakkaran/incident-triage-telemetry) (CC-BY-4.0, RCAEval credited). The app downloads it on first start.
 - **Why not a Hugging Face Space, as first planned:** new Gradio Spaces on free CPU now need a PRO plan (the API returned `402`), and the account's two free ZeroGPU slots were in use.
