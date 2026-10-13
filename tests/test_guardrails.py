@@ -244,3 +244,30 @@ def test_every_guardrail_event_has_the_required_fields(mock_deps_factory):
     assert result["guardrail_events"]
     for event in result["guardrail_events"]:
         assert set(event) == {"layer", "check", "case_id", "detail"} and event["case_id"] == CASE
+
+
+def test_quote_may_drop_comma_fields_of_one_line_but_not_invent_or_reorder():
+    line = "frontend -> productcatalogservice: n 7303 -> 7181, errors 0.0% -> 0.0%, p50 2.37 -> 2.42 ms, p95 3.76 -> 9.1 ms"
+    output = f"header\n{line}\nother line"
+    assert quote_in_output("frontend -> productcatalogservice: n 7303 -> 7181, p95 3.76 -> 9.1 ms", output)
+    assert not quote_in_output("n 7303 -> 7181, p95 9.1 -> 3.76", output)  # reordered numbers
+    assert not quote_in_output("header, other line", output)  # fields from different lines
+
+
+def test_resource_fault_type_needs_a_matching_metric_quote(mock_deps_factory):
+    # Says "mem" but only quotes the cpu line -> rejected, then fixed on retry.
+    wrong = {**GOOD_DIAGNOSIS, "candidates": [{"service": "cartservice", "fault_type": "mem", "confidence": 0.9}]}
+    deps = mock_deps_factory([tool_call("get_metric_changes", {}), "done", as_json(wrong), as_json(GOOD_DIAGNOSIS), AGREE, SCALE])
+    result = run_incident(CASE, deps, auto_approve=True)
+    assert any("needs a quote showing cartservice memory_bytes" in e["detail"] for e in result["guardrail_events"])
+    assert result["diagnosis"]["candidates"][0]["fault_type"] == "cpu"
+
+
+def test_runbook_for_the_fault_type_is_always_offered(mock_deps_factory, monkeypatch):
+    import triage.tools.runbooks as runbooks
+
+    monkeypatch.setattr(runbooks, "search", lambda query, k=3: [])  # semantic search finds nothing
+    deps = mock_deps_factory(happy_script(tool_call("get_metric_changes", {})))
+    result = run_incident(CASE, deps, auto_approve=True)
+    assert "rb-cpu-saturation" in result["runbooks"]
+    assert result["status"] == "diagnosed"

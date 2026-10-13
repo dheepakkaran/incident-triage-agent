@@ -61,32 +61,42 @@ def test_revise_sends_case_back_once_and_fixes_the_diagnosis(mock_deps_factory):
 
 
 def test_second_revise_escalates_with_both_views(mock_deps_factory):
-    revise_again = as_json(
-        {
-            "verdict": "revise",
-            "suspected_service": "frontend",
-            "reason": "I changed my mind",
-            "evidence": [{"tool_call_id": "t1", "quote": "frontend latency_p90_s: 0.1 -> 0.5"}],
-        }
-    )
     script = [
         tool_call("get_metric_changes", {}),
         "frontend latency is up",
         as_json(VICTIM_DIAGNOSIS),
         tool_call("get_trace_stats", {"service": "cartservice"}),
         REVISE_TO_CART,
-        "ok, cartservice",
-        as_json(GOOD_DIAGNOSIS),
-        revise_again,
+        "I still think it is the frontend",  # the investigator does not change its mind
+        as_json(VICTIM_DIAGNOSIS),
+        REVISE_TO_CART,
     ]
     deps = mock_deps_factory(script)
     result = run_incident(CASE, deps, auto_approve=True)
 
     assert result["status"] == "escalated"
     assert "still disagree after one revision" in result["escalation_note"]
-    assert "investigator: cartservice, reviewer: frontend" in result["escalation_note"]
+    assert "investigator: frontend, reviewer: cartservice" in result["escalation_note"]
     assert len(result["report"]["reviews"]) == 2
     assert "propose_action" not in nodes_of(result)
+
+
+def test_revise_toward_a_caller_is_rejected(mock_deps_factory):
+    """frontend calls cartservice, so blaming the frontend for a cartservice fault is moving blame upstream."""
+    to_caller = as_json(
+        {
+            "verdict": "revise",
+            "suspected_service": "frontend",
+            "reason": "frontend latency is up",
+            "evidence": [{"tool_call_id": "t1", "quote": "frontend latency_p90_s: 0.1 -> 0.5"}],
+        }
+    )
+    script = [tool_call("get_metric_changes", {}), "cart cpu", as_json(GOOD_DIAGNOSIS), to_caller, AGREE, SCALE]
+    deps = mock_deps_factory(script)
+    result = run_incident(CASE, deps, auto_approve=True)
+    assert any("is upstream" in e["detail"] for e in result["guardrail_events"])
+    assert [r["verdict"] for r in result["reviews"]] == ["agree"]
+    assert result["status"] == "diagnosed"
 
 
 def test_revise_without_real_evidence_is_retried(mock_deps_factory):

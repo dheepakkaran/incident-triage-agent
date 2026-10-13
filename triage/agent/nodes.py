@@ -15,10 +15,23 @@ from langgraph.types import interrupt
 
 from triage.agent import prompts
 from triage.config import Settings
-from triage.guardrails.actions import check_allowlist, check_runbook_match, check_target, simulate_action, to_proposal
+from triage.guardrails.actions import (
+    check_allowlist,
+    check_runbook_fault,
+    check_runbook_match,
+    check_target,
+    simulate_action,
+    to_proposal,
+)
 from triage.guardrails.input import validate_alert as check_alert
 from triage.guardrails.input import wrap_tool_output
-from triage.guardrails.output import check_candidates, parse_structured, top_confidence, verify_evidence
+from triage.guardrails.output import (
+    check_candidates,
+    check_fault_evidence,
+    parse_structured,
+    top_confidence,
+    verify_evidence,
+)
 from triage.guardrails.process import check_budget, check_known_tool, find_duplicate, validate_args
 from triage.llm.providers import LLMClient, LLMError
 from triage.schemas import ActionChoice, Approval, Diagnosis, ReviewVerdict, ToolResult
@@ -231,7 +244,8 @@ def diagnose(state: dict, deps: Deps) -> dict:
     results = state.get("tool_results") or {}
 
     def check(d: Diagnosis) -> list[str]:
-        return check_candidates(d.candidates, services) + verify_evidence(d.evidence, results)
+        problems = check_candidates(d.candidates, services) + verify_evidence(d.evidence, results)
+        return problems or check_fault_evidence(d.candidates, d.evidence)
 
     try:
         diagnosis, error, records, events = _structured_call(deps, messages, Diagnosis, check, "diagnose", state)
@@ -292,6 +306,11 @@ def review(state: dict, deps: Deps) -> dict:
             current_top = state["diagnosis"]["candidates"][0]["service"]
             if v.suspected_service == current_top:
                 problems.append(f"'revise' must name a different service than the diagnosis ({current_top}); if you agree, say 'agree'")
+            elif f"{v.suspected_service} -> {current_top}" in (state.get("call_graph") or []):
+                problems.append(
+                    f"{v.suspected_service} calls {current_top}, so it is upstream and shows {current_top}'s symptoms. "
+                    f"Revise only toward a service {current_top} depends on or an unrelated one; otherwise say 'agree'"
+                )
             elif v.suspected_service not in services:
                 problems.append(f"suspected_service '{v.suspected_service}' is not a known service")
             if not v.evidence:
@@ -348,20 +367,31 @@ def propose_action(state: dict, deps: Deps) -> dict:
     top = state["diagnosis"]["candidates"][0]
     query = f"{top['fault_type']} fault in {top['service']}: {state['diagnosis']['summary']}"[:300]
     hits = runbook_search.search(query, 3)
+    # Semantic search can miss; the runbook written for the diagnosed fault type is always a candidate.
+    exact = runbook_search.by_fault_type(top["fault_type"])
+    if exact and exact["id"] not in {h["id"] for h in hits}:
+        hits.append(exact)
     runbooks = {h["id"]: h for h in hits}
     call_id = f"t{len(state.get('tool_results') or {}) + 1}"
     text = runbook_search.render_hits(query, hits)
     result = ToolResult(tool_call_id=call_id, tool="search_runbooks", args={"query": query, "k": 3}, data=text)
 
+    matching = [rb_id for rb_id, rb in runbooks.items() if rb["fault_type"] == top["fault_type"]]
+    hint = f"Runbook for fault_type={top['fault_type']}: {matching[0]}." if matching else "No retrieved runbook matches the fault type."
     messages = [
         SystemMessage(prompts.ACTION_SYSTEM),
         HumanMessage(
             f"Diagnosis: {top['service']} ({top['fault_type']}, confidence {top['confidence']:.2f}). "
-            f"{state['diagnosis']['summary']}\n\n{wrap_tool_output(call_id, 'search_runbooks', text)}"
+            f"{state['diagnosis']['summary']}\n{hint}\n\n{wrap_tool_output(call_id, 'search_runbooks', text)}"
         ),
     ]
+
+    def check(choice: ActionChoice) -> list[str]:
+        problem = check_runbook_fault(choice, runbooks, top["fault_type"])
+        return [problem] if problem else []
+
     try:
-        choice, error, records, events = _structured_call(deps, messages, ActionChoice, lambda c: [], "propose_action", state)
+        choice, error, records, events = _structured_call(deps, messages, ActionChoice, check, "propose_action", state)
     except LLMError as err:
         return {**_escalate(f"LLM unavailable while choosing an action: {err}"), **_step("propose_action", started, error=True)}
     update = {"tool_results": {call_id: result.model_dump()}, "runbooks": runbooks, "llm_calls": records}

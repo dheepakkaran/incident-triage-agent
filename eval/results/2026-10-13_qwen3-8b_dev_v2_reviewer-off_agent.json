@@ -1,0 +1,218 @@
+{
+  "kind": "agent",
+  "date": "2026-10-13 01:00:06",
+  "split": "dev",
+  "provider": "ollama",
+  "model": "qwen3:8b",
+  "provider_chain": [
+    "ollama:qwen3:8b"
+  ],
+  "prompt_version": "v2",
+  "temperature": 0,
+  "reviewer_enabled": false,
+  "max_tool_calls": 8,
+  "reviewer_max_tool_calls": 3,
+  "confidence_threshold": 0.6,
+  "approval_policy": "auto-approve (fixed eval policy)",
+  "metrics": {
+    "n": 5,
+    "top1": 0.8,
+    "top3": 0.8,
+    "fault_type": 0.6,
+    "runbook_hit": 0.4,
+    "escalation_rate": 0.4,
+    "wrong_but_confident": 1,
+    "avg_tool_calls": 3.6,
+    "avg_tokens": 9767.0,
+    "avg_llm_latency_s": 32.952,
+    "avg_wall_s": 4.56,
+    "errors": 0
+  },
+  "cases": [
+    {
+      "case_id": "case_001",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": false,
+      "top3": false,
+      "fault_type_ok": false,
+      "runbook_id": "rb-network-latency",
+      "runbook_hit": false,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": true,
+      "reviews": [],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 7560,
+      "output_tokens": 380,
+      "llm_latency_s": 29.93,
+      "llm_calls": 6,
+      "cached_calls": 5,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": null,
+      "run_id": "case_001-20261013-005943-1bb446",
+      "wall_s": 9.3
+    },
+    {
+      "case_id": "case_002",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice"
+        ],
+        "fault_type": "disk",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-disk-pressure",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 7542,
+      "output_tokens": 505,
+      "llm_latency_s": 33.74,
+      "llm_calls": 6,
+      "cached_calls": 5,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": null,
+      "run_id": "case_002-20261013-005953-2a353c",
+      "wall_s": 3.0
+    },
+    {
+      "case_id": "case_003",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-packet-loss",
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": false,
+      "reviews": [],
+      "tool_calls": 4,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 10275,
+      "output_tokens": 520,
+      "llm_latency_s": 34.78,
+      "llm_calls": 7,
+      "cached_calls": 6,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": "model chose to escalate: No matching runbook found for the delay fault type in productcatalogservice.",
+      "run_id": "case_003-20261013-005956-46e5f0",
+      "wall_s": 3.8
+    },
+    {
+      "case_id": "case_004",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice"
+        ],
+        "fault_type": "mem",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-memory-leak",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [],
+      "tool_calls": 5,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 13519,
+      "output_tokens": 454,
+      "llm_latency_s": 34.8,
+      "llm_calls": 8,
+      "cached_calls": 7,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": null,
+      "run_id": "case_004-20261013-005959-2ba5a8",
+      "wall_s": 3.3
+    },
+    {
+      "case_id": "case_005",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "currencyservice"
+        ],
+        "fault_type": "disk",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false,
+      "runbook_id": "rb-cpu-saturation",
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": false,
+      "reviews": [],
+      "tool_calls": 3,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 7600,
+      "output_tokens": 480,
+      "llm_latency_s": 31.51,
+      "llm_calls": 6,
+      "cached_calls": 5,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": "model chose to escalate: Disk fault suspected but no matching runbook found.",
+      "run_id": "case_005-20261013-010003-5c43eb",
+      "wall_s": 3.4
+    }
+  ]
+}

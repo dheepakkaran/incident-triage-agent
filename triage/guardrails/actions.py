@@ -37,6 +37,14 @@ def check_runbook_match(choice: ActionChoice, runbooks: dict[str, dict]) -> str 
     return None
 
 
+def check_runbook_fault(choice: ActionChoice, runbooks: dict[str, dict], fault_type: str) -> str | None:
+    """Consistency: if a retrieved runbook covers the diagnosed fault type, the choice must use it."""
+    matching = [rb_id for rb_id, rb in runbooks.items() if rb["fault_type"] == fault_type]
+    if choice.action == "escalate_to_human" or not matching or choice.runbook_id in matching:
+        return None
+    return f"the diagnosis says fault_type={fault_type}, so use runbook {matching[0]}, not {choice.runbook_id}"
+
+
 def to_proposal(choice: ActionChoice) -> ActionProposal:
     risky = choice.action in RISKY_ACTIONS
     return ActionProposal(**choice.model_dump(), risk="high" if risky else "low", needs_approval=risky)

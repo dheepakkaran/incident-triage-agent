@@ -1,0 +1,247 @@
+{
+  "kind": "agent",
+  "date": "2026-10-13 00:45:32",
+  "split": "dev",
+  "provider": "ollama",
+  "model": "qwen3:8b",
+  "provider_chain": [
+    "ollama:qwen3:8b"
+  ],
+  "prompt_version": "v1",
+  "temperature": 0,
+  "reviewer_enabled": true,
+  "max_tool_calls": 8,
+  "reviewer_max_tool_calls": 3,
+  "confidence_threshold": 0.6,
+  "approval_policy": "auto-approve (fixed eval policy)",
+  "metrics": {
+    "n": 5,
+    "top1": 0.8,
+    "top3": 1.0,
+    "fault_type": 0.2,
+    "runbook_hit": 0.2,
+    "escalation_rate": 0.4,
+    "wrong_but_confident": 1,
+    "avg_tool_calls": 4.6,
+    "avg_tokens": 25195.8,
+    "avg_llm_latency_s": 117.666,
+    "avg_wall_s": 90.08,
+    "errors": 0
+  },
+  "cases": [
+    {
+      "case_id": "case_001",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice",
+          "checkoutservice",
+          "frontend"
+        ],
+        "fault_type": "loss",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false,
+      "runbook_id": "rb-packet-loss",
+      "runbook_hit": false,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "revise",
+        "agree"
+      ],
+      "tool_calls": 5,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 27571,
+      "output_tokens": 2283,
+      "llm_latency_s": 149.62,
+      "llm_calls": 14,
+      "cached_calls": 14,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/evidence",
+        "output/service"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_001-20261013-003802-9cf2ed",
+      "wall_s": 6.8
+    },
+    {
+      "case_id": "case_002",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false,
+      "runbook_id": null,
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": false,
+      "reviews": [
+        "revise"
+      ],
+      "tool_calls": 4,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 21151,
+      "output_tokens": 1792,
+      "llm_latency_s": 113.15,
+      "llm_calls": 11,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/evidence",
+        "output/evidence",
+        "output/evidence"
+      ],
+      "escalation_reason": "diagnosis failed output guardrails after 3 attempts: quote 'frontend -> productcatalogservice: n 7303 -> 7181, errors 0.0% -> 0.0%, p95 3.76' is not in the output of t3 (closest real line: 'frontend -> productcatalogservice: n 7303 -> 7181, errors 0.0% -> 0.0%, p50 2.34 -> 5.30 ms, p95 3.76 -> 95.56 ms')",
+      "run_id": "case_002-20261013-003809-3dd654",
+      "wall_s": 114.4
+    },
+    {
+      "case_id": "case_003",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice",
+          "checkoutservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-network-latency",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "revise",
+        "agree"
+      ],
+      "tool_calls": 4,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 18470,
+      "output_tokens": 1624,
+      "llm_latency_s": 98.44,
+      "llm_calls": 11,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": null,
+      "run_id": "case_003-20261013-004003-2af201",
+      "wall_s": 99.8
+    },
+    {
+      "case_id": "case_004",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice",
+          "emailservice",
+          "frontend"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": false,
+      "runbook_id": "rb-network-latency",
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": true,
+      "reviews": [
+        "revise",
+        "agree"
+      ],
+      "tool_calls": 6,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 30997,
+      "output_tokens": 1996,
+      "llm_latency_s": 130.2,
+      "llm_calls": 14,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/service"
+      ],
+      "escalation_reason": "model chose to escalate: Network delay into checkoutservice with high confidence",
+      "run_id": "case_004-20261013-004143-4e9ea9",
+      "wall_s": 131.5
+    },
+    {
+      "case_id": "case_005",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "currencyservice",
+          "checkoutservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false,
+      "runbook_id": "rb-network-latency",
+      "runbook_hit": false,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "revise",
+        "agree"
+      ],
+      "tool_calls": 4,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 18579,
+      "output_tokens": 1516,
+      "llm_latency_s": 96.92,
+      "llm_calls": 11,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": null,
+      "run_id": "case_005-20261013-004354-6a886e",
+      "wall_s": 97.9
+    }
+  ]
+}

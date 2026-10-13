@@ -1,0 +1,104 @@
+{
+  "kind": "baseline",
+  "method": "largest relative metric change",
+  "date": "2026-10-13 00:52:58",
+  "split": "dev",
+  "metrics": {
+    "n": 5,
+    "top1": 1.0,
+    "top3": 1.0,
+    "fault_type": 0.6
+  },
+  "cases": [
+    {
+      "case_id": "case_001",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice",
+          "checkoutservice",
+          "adservice"
+        ],
+        "fault_type": "cpu"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_002",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice",
+          "recommendationservice",
+          "frontend"
+        ],
+        "fault_type": "disk"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_003",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice",
+          "frontend",
+          "recommendationservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true
+    },
+    {
+      "case_id": "case_004",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice",
+          "checkoutservice",
+          "cartservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    },
+    {
+      "case_id": "case_005",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "currencyservice",
+          "frontend",
+          "checkoutservice"
+        ],
+        "fault_type": "delay"
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false
+    }
+  ]
+}

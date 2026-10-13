@@ -152,7 +152,7 @@ class LLMClient:
                     reply, usage = hit
                     # Report the latency of the original call, so cached reruns give honest numbers.
                     latency = usage.get("latency_s", 0.0)
-                    return reply, self._record(purpose, handle, usage, latency, cached=True, attempts=0)
+                    return reply, self._record(purpose, handle, usage, latency, cached=True, attempts=0, reply=reply)
 
         # 2. Walk the chain. Retry only errors that may go away (rate limit, timeout, 5xx).
         errors = []
@@ -172,11 +172,12 @@ class LLMClient:
                 usage = {**_usage(reply), "latency_s": round(latency, 3)}
                 if self.cache is not None:
                     self.cache.put(cache_key(handle.provider, handle.model, messages, tools), reply, usage)
-                return reply, self._record(purpose, handle, usage, latency, cached=False, attempts=attempt + 1)
+                return reply, self._record(purpose, handle, usage, latency, cached=False, attempts=attempt + 1, reply=reply)
         raise LLMError("all providers failed: " + " | ".join(errors))
 
     @staticmethod
-    def _record(purpose: str, handle: ModelHandle, usage: dict, latency: float, cached: bool, attempts: int) -> dict:
+    def _record(purpose: str, handle: ModelHandle, usage: dict, latency: float, cached: bool, attempts: int, reply: AIMessage) -> dict:
+        """One LLM call for the trace. The reply is kept so a run can be replayed without any API."""
         return {
             "purpose": purpose,
             "provider": handle.provider,
@@ -186,4 +187,8 @@ class LLMClient:
             "latency_s": round(latency, 3),
             "cached": cached,
             "attempts": attempts,
+            "reply": {
+                "content": reply.content if isinstance(reply.content, str) else str(reply.content),
+                "tool_calls": [{"name": c["name"], "args": c["args"], "id": c["id"]} for c in reply.tool_calls],
+            },
         }

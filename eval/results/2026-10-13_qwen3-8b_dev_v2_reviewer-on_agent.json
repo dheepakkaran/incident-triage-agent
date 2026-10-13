@@ -1,0 +1,240 @@
+{
+  "kind": "agent",
+  "date": "2026-10-13 00:59:40",
+  "split": "dev",
+  "provider": "ollama",
+  "model": "qwen3:8b",
+  "provider_chain": [
+    "ollama:qwen3:8b"
+  ],
+  "prompt_version": "v2",
+  "temperature": 0,
+  "reviewer_enabled": true,
+  "max_tool_calls": 8,
+  "reviewer_max_tool_calls": 3,
+  "confidence_threshold": 0.6,
+  "approval_policy": "auto-approve (fixed eval policy)",
+  "metrics": {
+    "n": 5,
+    "top1": 0.8,
+    "top3": 1.0,
+    "fault_type": 0.8,
+    "runbook_hit": 0.2,
+    "escalation_rate": 0.8,
+    "wrong_but_confident": 1,
+    "avg_tool_calls": 4.8,
+    "avg_tokens": 22852.8,
+    "avg_llm_latency_s": 98.072,
+    "avg_wall_s": 100.7,
+    "errors": 0
+  },
+  "cases": [
+    {
+      "case_id": "case_001",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "cpu"
+      },
+      "predicted": {
+        "top3": [
+          "emailservice",
+          "checkoutservice"
+        ],
+        "fault_type": "cpu",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": null,
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": false,
+      "reviews": [
+        "revise",
+        "revise"
+      ],
+      "tool_calls": 5,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 20177,
+      "output_tokens": 1156,
+      "llm_latency_s": 84.96,
+      "llm_calls": 11,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": "investigator and reviewer still disagree after one revision (investigator: emailservice, reviewer: checkoutservice)",
+      "run_id": "case_001-20261013-005116-129488",
+      "wall_s": 93.5
+    },
+    {
+      "case_id": "case_002",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "disk"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice",
+          "recommendationservice"
+        ],
+        "fault_type": "disk",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": null,
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": false,
+      "reviews": [
+        "revise",
+        "revise"
+      ],
+      "tool_calls": 4,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 17308,
+      "output_tokens": 1469,
+      "llm_latency_s": 96.27,
+      "llm_calls": 10,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": "investigator and reviewer still disagree after one revision (investigator: productcatalogservice, reviewer: checkoutservice)",
+      "run_id": "case_002-20261013-005250-85fa75",
+      "wall_s": 98.0
+    },
+    {
+      "case_id": "case_003",
+      "label": {
+        "service": "productcatalogservice",
+        "fault_type": "delay"
+      },
+      "predicted": {
+        "top3": [
+          "productcatalogservice"
+        ],
+        "fault_type": "delay",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": "rb-network-latency",
+      "runbook_hit": true,
+      "status": "diagnosed",
+      "escalated": false,
+      "wrong_but_confident": false,
+      "reviews": [
+        "revise",
+        "agree"
+      ],
+      "tool_calls": 5,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 24888,
+      "output_tokens": 1687,
+      "llm_latency_s": 119.26,
+      "llm_calls": 13,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "output/service"
+      ],
+      "escalation_reason": null,
+      "run_id": "case_003-20261013-005428-9e7891",
+      "wall_s": 120.7
+    },
+    {
+      "case_id": "case_004",
+      "label": {
+        "service": "emailservice",
+        "fault_type": "mem"
+      },
+      "predicted": {
+        "top3": [
+          "checkoutservice",
+          "emailservice"
+        ],
+        "fault_type": "mem",
+        "confidence": 0.95
+      },
+      "top1": false,
+      "top3": true,
+      "fault_type_ok": true,
+      "runbook_id": null,
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": true,
+      "reviews": [
+        "revise",
+        "revise"
+      ],
+      "tool_calls": 6,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 26745,
+      "output_tokens": 1290,
+      "llm_latency_s": 100.03,
+      "llm_calls": 12,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [
+        "process/duplicate"
+      ],
+      "escalation_reason": "investigator and reviewer still disagree after one revision (investigator: checkoutservice, reviewer: emailservice)",
+      "run_id": "case_004-20261013-005628-be5df7",
+      "wall_s": 100.7
+    },
+    {
+      "case_id": "case_005",
+      "label": {
+        "service": "currencyservice",
+        "fault_type": "loss"
+      },
+      "predicted": {
+        "top3": [
+          "currencyservice"
+        ],
+        "fault_type": "disk",
+        "confidence": 0.95
+      },
+      "top1": true,
+      "top3": true,
+      "fault_type_ok": false,
+      "runbook_id": null,
+      "runbook_hit": false,
+      "status": "escalated",
+      "escalated": true,
+      "wrong_but_confident": false,
+      "reviews": [
+        "revise",
+        "revise"
+      ],
+      "tool_calls": 4,
+      "reviewer_tool_calls": 0,
+      "input_tokens": 18242,
+      "output_tokens": 1302,
+      "llm_latency_s": 89.84,
+      "llm_calls": 10,
+      "cached_calls": 0,
+      "providers": [
+        "ollama:qwen3:8b"
+      ],
+      "guardrail_events": [],
+      "escalation_reason": "investigator and reviewer still disagree after one revision (investigator: currencyservice, reviewer: checkoutservice)",
+      "run_id": "case_005-20261013-005809-6512ec",
+      "wall_s": 90.6
+    }
+  ]
+}

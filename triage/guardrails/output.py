@@ -54,20 +54,28 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().strip("\"'` ")
 
 
-def quote_in_output(quote: str, output: str) -> bool:
-    """True if the quote appears in the output. A quote may skip text with '...'."""
-    haystack = normalize(output)
-    parts = [normalize(p) for p in re.split(r"\.\.\.|…", quote)]
-    parts = [p for p in parts if p]
-    if not parts:
-        return False
+def _parts_in_order(parts: list[str], text: str) -> bool:
     position = 0
     for part in parts:
-        found = haystack.find(part, position)
+        found = text.find(part, position)
         if found == -1:
             return False
         position = found + len(part)
     return True
+
+
+def quote_in_output(quote: str, output: str) -> bool:
+    """True if the quote appears in the output.
+
+    Allowed shortenings: skip text with '...', or drop comma-separated fields of ONE line
+    (e.g. keep "n 59 -> 47, p95 4.88 -> 85.56 ms" from a longer trace line). Every part
+    must still appear, in order, so the quote can only contain real text.
+    """
+    parts = [p for p in (normalize(x) for x in re.split(r"\.\.\.|…", quote)) if p]
+    if parts and _parts_in_order(parts, normalize(output)):
+        return True
+    fields = [p for p in (normalize(x) for x in re.split(r"\.\.\.|…|,", quote)) if p]
+    return bool(fields) and any(_parts_in_order(fields, normalize(line)) for line in output.splitlines())
 
 
 def verify_evidence(evidence: list, tool_results: dict[str, dict]) -> list[str]:
@@ -103,6 +111,22 @@ def check_candidates(candidates: list, services: list[str]) -> list[str]:
         if cand.fault_type not in (*FAULT_TYPES, "unknown"):
             errors.append(f"fault_type '{cand.fault_type}' must be one of {', '.join(FAULT_TYPES)}, unknown")
     return errors
+
+
+# A resource fault must be backed by a quote of that resource's metric for the blamed service.
+FAULT_METRIC = {"cpu": "cpu_usage", "mem": "memory_bytes", "disk": "disk_io_bytes", "socket": "open_sockets"}
+
+
+def check_fault_evidence(candidates: list, evidence: list) -> list[str]:
+    if not candidates or candidates[0].fault_type not in FAULT_METRIC:
+        return []
+    top, metric = candidates[0], FAULT_METRIC[candidates[0].fault_type]
+    if any(top.service in normalize(e.quote) and metric in normalize(e.quote) for e in evidence):
+        return []
+    return [
+        f"fault_type '{top.fault_type}' needs a quote showing {top.service} {metric}; none of your quotes does. "
+        f"Quote that metric line, or pick the fault type your evidence supports"
+    ]
 
 
 def top_confidence(candidates: list) -> float:

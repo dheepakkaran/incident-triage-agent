@@ -121,13 +121,29 @@ def search(query: str, k: int = 3) -> list[dict]:
     return hits
 
 
+def by_fault_type(fault_type: str) -> dict | None:
+    """The runbook written for this fault type, looked up by its front matter (no embedding)."""
+    for book in load_runbooks().values():
+        if book["fault_type"] == fault_type:
+            return {
+                "id": book["id"],
+                "title": book["title"],
+                "fault_type": book["fault_type"],
+                "allowed_actions": book["allowed_actions"],
+                "snippet": " ".join(f"{book['title']}. {_symptoms(book['body'])}".split())[:200],
+                "score": None,
+            }
+    return None
+
+
 def render_hits(query: str, hits: list[dict]) -> str:
     """Short text lines the model can quote."""
     lines = [f"runbooks matching: {query}"]
     for hit in hits:
         lines.append(
             f"- {hit['id']} | {hit['title']} | fault_type={hit['fault_type']} | "
-            f"allowed_actions={','.join(hit['allowed_actions'])} | score={hit['score']}"
+            f"allowed_actions={','.join(hit['allowed_actions'])} | "
+            + (f"score={hit['score']}" if hit["score"] is not None else "matched by fault_type")
         )
         lines.append(f"  {hit['snippet']}")
     return "\n".join(lines)
