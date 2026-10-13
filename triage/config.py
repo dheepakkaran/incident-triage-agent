@@ -79,7 +79,7 @@ def get_settings() -> Settings:
     return Settings(
         provider_chain=chain,
         groq_model=_str("GROQ_MODEL", "openai/gpt-oss-120b"),
-        openrouter_model=_str("OPENROUTER_MODEL", "openai/gpt-oss-120b:free"),
+        openrouter_model=_str("OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free"),
         ollama_model=_str("OLLAMA_MODEL", "qwen3:8b"),
         groq_api_key=_str("GROQ_API_KEY", ""),
         openrouter_api_key=_str("OPENROUTER_API_KEY", ""),
