@@ -100,5 +100,5 @@ def get_settings() -> Settings:
         chroma_dir=_path("CHROMA_DIR", cache_dir / "chroma"),
         runs_dir=_path("RUNS_DIR", ROOT / "runs"),
         cache_dir=cache_dir,
-        embedding_model=_str("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
+        embedding_model=_str("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5"),
     )
