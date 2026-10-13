@@ -95,3 +95,47 @@ def test_scripted_model_records_prompts_and_runs_out_loudly():
     assert model.prompts == [MESSAGES]
     with pytest.raises(AssertionError, match="ran out"):
         model.invoke(MESSAGES)
+
+
+def test_thinking_blocks_are_dropped_and_server_errors_retried():
+    from triage.llm.providers import _is_retryable
+
+    thinking_reply = AIMessage(content=[{"type": "thinking", "thinking": "hmm"}, {"type": "text", "text": '{"a": 1}'}])
+    client = LLMClient([ModelHandle("google", "gemma", ScriptedChatModel([thinking_reply]))])
+    reply, _ = client.invoke(MESSAGES)
+    assert reply.content == '{"a": 1}'
+
+    class GoogleStyleError(Exception):
+        code = 500
+
+    assert _is_retryable(GoogleStyleError("500 INTERNAL"))
+
+
+def test_fallback_cache_never_beats_the_primary(tmp_path):
+    cache = DiskCache(tmp_path)
+    old_backup = LLMClient([ModelHandle("ollama", "small", ScriptedChatModel(["old answer"]))], cache=cache)
+    old_backup.invoke(MESSAGES)  # the fallback's answer is now cached
+    primary = ScriptedChatModel(["fresh answer"])
+    client = LLMClient([ModelHandle("groq", "big", primary), ModelHandle("ollama", "small", ScriptedChatModel([]))], cache=cache)
+    reply, record = client.invoke(MESSAGES)
+    assert reply.content == "fresh answer" and record["provider"] == "groq" and not record["cached"]
+
+
+def test_long_rate_limit_wait_moves_on_when_a_backup_exists():
+    class SlowRateLimit(Exception):
+        status_code = 429
+
+        class response:  # noqa: N801 - mimics an HTTP response object
+            headers = {"retry-after": "60"}
+
+    sleeps = []
+    failing = FailingModel(SlowRateLimit("429"))
+    client = LLMClient([ModelHandle("groq", "m1", failing), ModelHandle("ollama", "m2", ScriptedChatModel(["backup"]))], sleep=sleeps.append)
+    reply, record = client.invoke(MESSAGES)
+    assert record["provider"] == "ollama" and failing.calls == 1 and sleeps == []  # no 60 s wait
+
+    sleeps.clear()
+    alone = FailingModel(SlowRateLimit("429"))
+    with pytest.raises(LLMError):
+        LLMClient([ModelHandle("groq", "m1", alone)], sleep=sleeps.append).invoke(MESSAGES)
+    assert len(sleeps) == MAX_RETRIES and sleeps[0] > 60  # the last provider waits it out

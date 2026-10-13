@@ -16,7 +16,8 @@ from triage.config import Settings, get_settings
 from triage.llm.cache import DiskCache, cache_key
 
 MAX_RETRIES = 2  # per provider, only for rate limits, timeouts and 5xx
-MAX_WAIT_S = 65.0  # long enough to outlast a per-minute token window
+MAX_WAIT_S = 65.0  # long enough to outlast a per-minute token window (used by the last provider in the chain)
+FALLBACK_WAIT_S = 20.0  # when another provider is next, do not sit out a long wait: move on
 
 
 class LLMError(RuntimeError):
@@ -80,12 +81,17 @@ def build_chat_model(provider: str, settings: Settings) -> ModelHandle | None:
             return None
         from langchain_google_genai import ChatGoogleGenerativeAI
 
+        extra = {}
+        effort = os.getenv("GOOGLE_REASONING_EFFORT", "minimal").strip()
+        if effort:
+            extra["reasoning_effort"] = effort  # Gemma 4 "thinks" a lot by default: 37 s vs 1.5 s per review call
         chat = ChatGoogleGenerativeAI(
-            model=settings.google_model,  # default: Gemma 4 31B, open weights, served by Google AI Studio
+            model=settings.google_model,  # Gemma 4, open weights, served by Google AI Studio
             google_api_key=settings.google_api_key,
             temperature=0,
             max_retries=0,
             timeout=settings.llm_timeout_s,
+            **extra,
         )
         return ModelHandle("google", settings.google_model, chat)
 
@@ -107,22 +113,38 @@ def build_chat_model(provider: str, settings: Settings) -> ModelHandle | None:
 
 
 def _is_retryable(err: Exception) -> bool:
-    status = getattr(err, "status_code", None) or getattr(getattr(err, "response", None), "status_code", None)
+    status = (
+        getattr(err, "status_code", None)
+        or getattr(getattr(err, "response", None), "status_code", None)
+        or getattr(err, "code", None)  # Google's client puts the HTTP status here
+    )
     if status in (429, 500, 502, 503, 504):
         return True
     name = type(err).__name__.lower()
     return "timeout" in name or "ratelimit" in name or "connection" in name
 
 
-def _wait_seconds(err: Exception, attempt: int) -> float:
-    """Honour the provider's retry-after header when it sends one, else exponential backoff."""
+def _wait_seconds(err: Exception, attempt: int, cap: float = MAX_WAIT_S) -> float | None:
+    """Honour the provider's retry-after header when it sends one, else exponential backoff.
+    Returns None when the wait would be longer than `cap` (better to try the next provider)."""
     headers = getattr(getattr(err, "response", None), "headers", None) or {}
     retry_after = headers.get("retry-after")
     try:
         wait = float(retry_after) if retry_after else 2.0 * (2**attempt)
     except ValueError:
         wait = 2.0 * (2**attempt)
-    return min(wait + 0.5, MAX_WAIT_S)
+    if wait > cap:
+        return None
+    return wait + 0.5
+
+
+def _text_only(reply: AIMessage) -> AIMessage:
+    """Some models (e.g. Gemma 4) return a list of blocks, including their "thinking". Keep the text only,
+    so every provider's reply parses the same way downstream."""
+    if isinstance(reply.content, list):
+        parts = [b if isinstance(b, str) else b.get("text", "") for b in reply.content if isinstance(b, str) or b.get("type") == "text"]
+        reply.content = "".join(parts)
+    return reply
 
 
 def _usage(reply: AIMessage) -> dict:
@@ -160,19 +182,18 @@ class LLMClient:
 
     def invoke(self, messages: list[BaseMessage], tools: list[dict] | None = None, purpose: str = "") -> tuple[AIMessage, dict]:
         """Return (reply, record). `record` has provider, model, tokens, latency, cached, attempts."""
-        # 1. Any provider's cached reply for this exact prompt is good enough: reruns cost nothing.
-        if self.cache is not None:
-            for handle in self.handles:
+        # Walk the chain in order. Each provider's own cached reply is used before calling it (so eval
+        # reruns cost nothing), but a fallback's old cached answer never wins over the primary model.
+        # Retry only errors that may go away (rate limit, timeout, 5xx).
+        errors = []
+        for position, handle in enumerate(self.handles):
+            is_last = position == len(self.handles) - 1
+            if self.cache is not None:
                 hit = self.cache.get(cache_key(handle.provider, handle.model, messages, tools))
                 if hit is not None:
                     reply, usage = hit
                     # Report the latency of the original call, so cached reruns give honest numbers.
-                    latency = usage.get("latency_s", 0.0)
-                    return reply, self._record(purpose, handle, usage, latency, cached=True, attempts=0, reply=reply)
-
-        # 2. Walk the chain. Retry only errors that may go away (rate limit, timeout, 5xx).
-        errors = []
-        for handle in self.handles:
+                    return reply, self._record(purpose, handle, usage, usage.get("latency_s", 0.0), cached=True, attempts=0, reply=reply)
             model = handle.chat.bind_tools(tools) if tools else handle.chat
             for attempt in range(MAX_RETRIES + 1):
                 start = time.perf_counter()
@@ -181,10 +202,13 @@ class LLMClient:
                 except Exception as err:  # provider SDKs raise many different error types
                     errors.append(f"{handle.provider}: {type(err).__name__}: {str(err)[:200]}")
                     if _is_retryable(err) and attempt < MAX_RETRIES:
-                        self._sleep(_wait_seconds(err, attempt))
-                        continue
+                        wait = _wait_seconds(err, attempt, MAX_WAIT_S if is_last else FALLBACK_WAIT_S)
+                        if wait is not None:
+                            self._sleep(wait)
+                            continue
                     break  # give up on this provider, fall back to the next one
                 latency = time.perf_counter() - start
+                reply = _text_only(reply)
                 usage = {**_usage(reply), "latency_s": round(latency, 3)}
                 if self.cache is not None:
                     self.cache.put(cache_key(handle.provider, handle.model, messages, tools), reply, usage)

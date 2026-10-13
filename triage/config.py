@@ -90,7 +90,7 @@ def get_settings() -> Settings:
         groq_model=_str("GROQ_MODEL", "openai/gpt-oss-120b"),
         openrouter_model=_str("OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free"),
         ollama_model=_str("OLLAMA_MODEL", "qwen3:8b"),
-        google_model=_str("GOOGLE_MODEL", "gemma-4-31b-it"),
+        google_model=_str("GOOGLE_MODEL", "gemma-4-26b-a4b-it"),  # ~3 s/call; the 31B took 26-45 s in our test
         groq_api_key=_str("GROQ_API_KEY", ""),
         openrouter_api_key=_str("OPENROUTER_API_KEY", ""),
         google_api_key=_str("GOOGLE_API_KEY", ""),
