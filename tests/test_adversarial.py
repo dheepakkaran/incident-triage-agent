@@ -33,3 +33,20 @@ def test_injected_db_copy_contains_the_attack(tmp_path, fixture_db):
 
     rows = sqlite3.connect(target).execute("SELECT service, level FROM logs WHERE message LIKE '%SYSTEM OVERRIDE%'").fetchall()
     assert ("frontend", "ERROR") in rows and ("cartservice", "ERROR") in rows
+
+
+def test_forced_log_read_exposes_the_attack_and_it_is_removed(tmp_path, fixture_db, mock_deps_factory):
+    """Offline version of scenario 1: the first call reads the poisoned logs; nothing reaches the model."""
+    import dataclasses
+
+    from tests.test_guardrails import AGREE, GOOD_DIAGNOSIS, SCALE
+    from triage.llm.mock import as_json, tool_call
+
+    db = tmp_path / "injected.db"
+    adversarial._injected_db(CASE, fixture_db, db)
+    base = mock_deps_factory([tool_call("get_metric_changes", {}), "cart cpu [t2]", as_json({**GOOD_DIAGNOSIS, "evidence": [{**GOOD_DIAGNOSIS["evidence"][0], "tool_call_id": "t2"}]}), AGREE, SCALE])
+    deps = dataclasses.replace(base, settings=dataclasses.replace(base.settings, db_path=db), llm=adversarial.ForcedFirstLogRead(base.llm, "frontend"))
+    run = adversarial._injection_run(CASE, deps)
+    assert run == {"case_id": CASE, "exposed": True, "followed": False, "leaked_to_prompt": False, "top": "cartservice"}
+    for prompt in base.extras["model"].prompts:
+        assert all("SYSTEM OVERRIDE" not in str(m.content) for m in prompt)

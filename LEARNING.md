@@ -93,7 +93,13 @@ validate_alert -> investigate <-> run_tools -> diagnose -> review <-> review_too
   - `revise` adds the reviewer's reason as a message in the investigator's conversation and routes back to `investigate`.
 - **Guardrails on the reviewer:** a `revise` must cite at least one real quote and must name a *different* service than the diagnosis. Without the second rule, qwen3:8b sometimes said "revise" while naming the same service, which forced a pointless escalation.
 - **Why only one revision round:** two models can loop forever, each convincing the other in turn. One round gives the investigator a chance to correct itself. If the reviewer still disagrees, a human should decide, so the run escalates with both views in the report.
-- **What the ablation showed:** see the README's results section. It is decided on dev only, and the test split is reported for both configurations.
+- **What the ablation showed** (`eval/results/RESULTS.md`):
+  - **The rule fixed in advance:** keep the reviewer on only if dev top-1 or wrong-but-confident improves.
+  - **Neither improved on dev:** top-1 was 80% vs 80%, and wrong-but-confident 1 vs 1. So the default is **off**.
+  - **What it did do:** it caught the classic mistake. Scout blamed checkoutservice, a caller, and Skeptic pointed at emailservice, the real cause. Those runs escalated instead of sending a wrong fix for approval: "wrong & proposed" fell from 1 to 0 on dev and from 2 to 1 on test.
+  - **The price:** about 1.5× the tokens and more escalations.
+  - **Why "wrong-but-confident" missed it:** that metric counts a wrong answer even when it was escalated, so it can't see this benefit. "Wrong & proposed" can, so both are reported.
+  - **Interview line:** the reviewer trades throughput for safety. With a small model that safety is real but modest, and an honest eval says so.
 
 ## 9. How the eval avoids label leakage, and why dev and test are split
 

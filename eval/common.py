@@ -77,22 +77,24 @@ def write_results_table() -> Path:
         lines += [
             "## Root-cause accuracy",
             "",
-            "| run | split | n | top-1 | top-3 | fault type | runbook hit | escalated | wrong & confident | tool calls | tokens | LLM latency (s) | file |",
-            "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+            "| run | split | n | top-1 | top-3 | fault type | runbook hit | escalated | wrong & confident | wrong & proposed | tool calls | tokens | LLM latency (s) | file |",
+            "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
         ]
         for name, d in agent:
             m = d["metrics"]
             label = f"agent {d['model']} prompt {d['prompt_version']}, reviewer {'on' if d['reviewer_enabled'] else 'off'}"
+            # wrong & proposed: top-1 wrong AND not escalated, i.e. a wrong fix reached the approval step.
+            proposed_wrong = sum(1 for c in d["cases"] if not c["top1"] and not c["escalated"])
             lines.append(
                 f"| {label} | {d['split']} | {m['n']} | {_pct(m['top1'])} | {_pct(m['top3'])} | {_pct(m['fault_type'])} | "
-                f"{_pct(m['runbook_hit'])} | {_pct(m['escalation_rate'])} | {m['wrong_but_confident']} | "
+                f"{_pct(m['runbook_hit'])} | {_pct(m['escalation_rate'])} | {m['wrong_but_confident']} | {proposed_wrong} | "
                 f"{m['avg_tool_calls']} | {m['avg_tokens']:.0f} | {m['avg_llm_latency_s']} | `{name}` |"
             )
         for name, d in baseline:
             m = d["metrics"]
             lines.append(
                 f"| baseline: {d['method']} | {d['split']} | {m['n']} | {_pct(m['top1'])} | {_pct(m['top3'])} | "
-                f"{_pct(m['fault_type'])} | - | - | - | 0 | 0 | 0 | `{name}` |"
+                f"{_pct(m['fault_type'])} | - | - | - | - | 0 | 0 | 0 | `{name}` |"
             )
         lines.append("")
     for name, d in adversarial:

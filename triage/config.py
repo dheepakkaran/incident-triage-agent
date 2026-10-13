@@ -88,7 +88,8 @@ def get_settings() -> Settings:
         llm_cache_enabled=_bool("LLM_CACHE_ENABLED", True),
         max_tool_calls=_int("MAX_TOOL_CALLS", 8),
         confidence_threshold=_float("CONFIDENCE_THRESHOLD", 0.6),
-        reviewer_enabled=_bool("REVIEWER_ENABLED", True),
+        # Off by default: on dev the reviewer did not improve top-1 or wrong-but-confident (README, Results).
+        reviewer_enabled=_bool("REVIEWER_ENABLED", False),
         reviewer_max_tool_calls=_int("REVIEWER_MAX_TOOL_CALLS", 3),
         data_dir=data_dir,
         raw_dir=_path("RAW_DIR", data_dir / "raw"),
