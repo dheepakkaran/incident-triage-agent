@@ -1,15 +1,16 @@
 """All prompts in one place, short and versioned. Bump PROMPT_VERSION on any wording change:
 it is written into every report and eval result, so results can be traced to a prompt."""
 
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 
-FAULT_TYPE_HINTS = """Fault types and their usual signature:
-- cpu: the service's own cpu_usage jumps; its latency rises.
-- mem: the service's own memory_bytes jumps (cpu may rise too).
-- disk: the service's own disk_io_bytes jumps.
-- delay: calls INTO the service get slower on the caller side, while its own cpu/memory stay flat.
-- loss: calls into the service time out or fail (errors, retries), latency spikes are uneven.
-- socket: the service's open_sockets change or callers see connection errors."""
+FAULT_TYPE_HINTS = """Latency rises in EVERY fault type, so latency alone is not evidence for "delay".
+Pick fault_type from the root-cause service's OWN metrics, checking in this order:
+  1. its disk_io_bytes jumped                      -> disk
+  2. its memory_bytes jumped (several times higher) -> mem  (cpu often rises too)
+  3. its cpu_usage jumped                          -> cpu
+  4. its open_sockets changed, or connection errors -> socket
+  5. calls into it fail or time out (errors > 0%)  -> loss
+  6. none of the above, only calls into it are slower -> delay"""
 
 INVESTIGATOR_SYSTEM = """You are an on-call SRE assistant doing the first-pass investigation of a production alert
 in the Online Boutique microservice system. Find the root-cause service and its fault type.
@@ -41,8 +42,11 @@ Rules:
 - evidence: 1 to 6 items. Each quote must be copied exactly from the tool output with that id (a line or part of
   a line, at least a few words). Never invent ids or quotes.
 - {fault_hints}
-- If the evidence is weak or conflicting, say so in the summary and lower the confidence. Use confidence >= 0.8
-  only when two independent signals (e.g. metrics and traces) point at the same service."""
+- A service whose latency rose while its own cpu/memory/disk/sockets stayed flat, and which calls a service whose
+  resources did change, is a victim, not the root cause.
+- Confidence: 0.85-0.95 only if two independent signals (metrics AND traces or logs) point at the service and the
+  fault-type rule is clear; 0.6-0.8 if one strong signal; below 0.6 if you are guessing. If evidence is weak or
+  conflicting, say so in the summary."""
 
 REVIEWER_SYSTEM = """You review another engineer's root-cause diagnosis. Try to prove it wrong.
 Is the top service the real cause, or a victim of a dependency it calls? Does the evidence fit another explanation
@@ -62,7 +66,8 @@ human approval. Reply with ONLY a JSON object:
   "target_service": "<service>", "runbook_id": "<id>", "reason": "<short>"}}
 
 Rules:
-- Use the runbook whose fault_type matches the diagnosis. The action must be in that runbook's allowed_actions.
+- Use the runbook whose fault_type matches the diagnosis (named below when one was found). The action must be in
+  that runbook's allowed_actions.
 - Target the root-cause service. If the diagnosis looks unsure, choose escalate_to_human."""
 
 RETRY_JSON = "Your reply was rejected: {error}. Fix it and reply with ONLY the corrected JSON object."

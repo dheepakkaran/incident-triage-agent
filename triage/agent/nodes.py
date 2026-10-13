@@ -15,7 +15,14 @@ from langgraph.types import interrupt
 
 from triage.agent import prompts
 from triage.config import Settings
-from triage.guardrails.actions import check_allowlist, check_runbook_match, check_target, simulate_action, to_proposal
+from triage.guardrails.actions import (
+    check_allowlist,
+    check_runbook_fault,
+    check_runbook_match,
+    check_target,
+    simulate_action,
+    to_proposal,
+)
 from triage.guardrails.input import validate_alert as check_alert
 from triage.guardrails.input import wrap_tool_output
 from triage.guardrails.output import check_candidates, parse_structured, top_confidence, verify_evidence
@@ -353,15 +360,22 @@ def propose_action(state: dict, deps: Deps) -> dict:
     text = runbook_search.render_hits(query, hits)
     result = ToolResult(tool_call_id=call_id, tool="search_runbooks", args={"query": query, "k": 3}, data=text)
 
+    matching = [rb_id for rb_id, rb in runbooks.items() if rb["fault_type"] == top["fault_type"]]
+    hint = f"Runbook for fault_type={top['fault_type']}: {matching[0]}." if matching else "No retrieved runbook matches the fault type."
     messages = [
         SystemMessage(prompts.ACTION_SYSTEM),
         HumanMessage(
             f"Diagnosis: {top['service']} ({top['fault_type']}, confidence {top['confidence']:.2f}). "
-            f"{state['diagnosis']['summary']}\n\n{wrap_tool_output(call_id, 'search_runbooks', text)}"
+            f"{state['diagnosis']['summary']}\n{hint}\n\n{wrap_tool_output(call_id, 'search_runbooks', text)}"
         ),
     ]
+
+    def check(choice: ActionChoice) -> list[str]:
+        problem = check_runbook_fault(choice, runbooks, top["fault_type"])
+        return [problem] if problem else []
+
     try:
-        choice, error, records, events = _structured_call(deps, messages, ActionChoice, lambda c: [], "propose_action", state)
+        choice, error, records, events = _structured_call(deps, messages, ActionChoice, check, "propose_action", state)
     except LLMError as err:
         return {**_escalate(f"LLM unavailable while choosing an action: {err}"), **_step("propose_action", started, error=True)}
     update = {"tool_results": {call_id: result.model_dump()}, "runbooks": runbooks, "llm_calls": records}

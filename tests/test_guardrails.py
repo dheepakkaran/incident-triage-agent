@@ -244,3 +244,11 @@ def test_every_guardrail_event_has_the_required_fields(mock_deps_factory):
     assert result["guardrail_events"]
     for event in result["guardrail_events"]:
         assert set(event) == {"layer", "check", "case_id", "detail"} and event["case_id"] == CASE
+
+
+def test_quote_may_drop_comma_fields_of_one_line_but_not_invent_or_reorder():
+    line = "frontend -> productcatalogservice: n 7303 -> 7181, errors 0.0% -> 0.0%, p50 2.37 -> 2.42 ms, p95 3.76 -> 9.1 ms"
+    output = f"header\n{line}\nother line"
+    assert quote_in_output("frontend -> productcatalogservice: n 7303 -> 7181, p95 3.76 -> 9.1 ms", output)
+    assert not quote_in_output("n 7303 -> 7181, p95 9.1 -> 3.76", output)  # reordered numbers
+    assert not quote_in_output("header, other line", output)  # fields from different lines
