@@ -1,0 +1,33 @@
+# Python 3.11+ (developed on 3.14). Versions pinned to what the tests and eval ran with.
+
+# Agent graph + LLM wrappers
+langgraph==1.2.15
+langgraph-checkpoint-sqlite==3.1.2
+langchain-core==1.6.10
+langchain-groq==1.1.3
+langchain-openai==1.7.1
+langchain-ollama==1.1.0
+
+# Schemas
+pydantic==2.14.1
+
+# Runbook retrieval (local, no server)
+chromadb==1.5.9
+sentence-transformers==6.1.0
+
+# MCP server
+mcp==2.3.0
+
+# Data
+pandas==3.0.6
+pyarrow==26.0.0
+huggingface_hub==1.33.0
+
+# CLI + config
+rich==15.0.0
+python-dotenv==1.2.4
+httpx==0.28.1
+
+# Tests + lint
+pytest==9.1.1
+ruff==0.17.0
