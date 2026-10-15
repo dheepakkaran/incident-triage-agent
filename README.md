@@ -6,6 +6,8 @@ Built with LangGraph (explicit `StateGraph`, `interrupt()`, SQLite checkpointer)
 
 **Live demo: [incident-triage-agen.streamlit.app](https://incident-triage-agen.streamlit.app)**. Replay any test case with no API calls, or run one live with Scout on Groq and Skeptic on Gemma.
 
+![Demo of the app on test case case_006: an alert comes in, Scout investigates the metrics, logs and traces and blames recommendationservice, Skeptic reviews and agrees, the diagnosis quotes its evidence, and the proposed restart waits for human approval; then the trace, the eval results and the 7 of 7 blocked guardrail attacks](docs/demo.webp)
+
 ---
 
 ## 1. The problem
